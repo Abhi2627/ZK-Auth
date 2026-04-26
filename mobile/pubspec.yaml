@@ -1,0 +1,40 @@
+name: zk_auth
+description: "ZK-Auth Flutter mobile client"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP client
+  dio: ^5.4.3+1
+
+  # State management
+  flutter_bloc: ^8.1.5
+  equatable: ^2.0.5
+
+  # Secure storage (JWT refresh token)
+  flutter_secure_storage: ^9.0.0
+
+  # WebSocket
+  web_socket_channel: ^3.0.0
+
+  # ZKP (Phase 3: evaluate flutter_js or FFI-based snarkjs WASM interop)
+  # flutter_js: ^0.8.0   # candidate — deferred to Phase 3 evaluation
+
+  # Utilities
+  uuid: ^4.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  bloc_test: ^9.1.7
+
+flutter:
+  uses-material-design: true

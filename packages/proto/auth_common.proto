@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package zkauth.common;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth Common — shared message types used across ZK-Auth gRPC services.
+// Not a service definition itself; imported by other .proto files.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Canonical error envelope for all ZK-Auth gRPC error details.
+// Attach as google.rpc.Status.details via grpc-status-details.
+message ZkAuthError {
+  string code    = 1;  // Machine-readable: INVALID_PROOF | NULLIFIER_REPLAY | etc.
+  string message = 2;  // Human-readable description
+  string trace   = 3;  // Correlation ID for log tracing (UUID)
+}
+
+// Represents a ZKP challenge nonce issued to a client.
+message Challenge {
+  string challenge_id = 1;  // UUID
+  bytes  nonce        = 2;  // 32-byte cryptographically random nonce
+  int64  expires_at   = 3;  // Unix epoch ms — TTL: 120 seconds from issuance
+}
+
+// Groth16 proof payload submitted by the client for verification.
+message ZkProof {
+  string challenge_id   = 1;  // Must match an active Challenge.challenge_id
+  string proof_json     = 2;  // JSON-serialized SnarkJS Groth16 proof object
+  repeated string public_signals = 3;  // [nullifier_hash, commitment_root]
+}
+
+// Result of a proof verification attempt.
+message VerifyResult {
+  bool   valid         = 1;
+  string session_id    = 2;  // Populated only on valid=true
+  string access_token  = 3;  // Short-lived JWT (15 min) — valid=true only
+  string refresh_token = 4;  // Rotation token — valid=true only
+  int64  expires_at    = 5;  // Access token expiry (Unix epoch ms)
+}
+
+// Represents a selective-disclosure credential claim predicate.
+message ClaimPredicate {
+  string attribute    = 1;  // e.g., "clearance_level"
+  string operator     = 2;  // EQ | GTE | LTE | IN
+  string value        = 3;  // Serialized comparison value
+}
+
+// Merkle proof for selective disclosure verification.
+message MerkleProof {
+  string credential_id    = 1;
+  string merkle_root      = 2;  // hex-encoded root commitment R
+  string proof_json       = 3;  // JSON-serialized Merkle path + proof π
+  repeated string public_signals = 4;
+  ClaimPredicate predicate = 5;
+}

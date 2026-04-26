@@ -1,0 +1,290 @@
+// =============================================================================
+// ZK-Auth Prisma Schema
+//
+// Database: PostgreSQL 16
+// Multi-schema: "auth" (user/session/ZKP flow) + "zkp" (credentials/Merkle)
+//
+// TimescaleDB telemetry schema is managed separately via raw SQL
+// (see prisma/migrations/init_timescale.sql) because TimescaleDB hypertables,
+// compression policies, and continuous aggregates are not expressible in
+// Prisma SDL. The telemetry DB connection uses a separate TIMESCALE_URL env var.
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["auth", "zkp"]
+}
+
+// =============================================================================
+// SCHEMA: auth
+// =============================================================================
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+// Core identity record. No plaintext password — authentication is entirely ZKP.
+// public_key: the user's Poseidon commitment H(secret) registered at signup.
+model User {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  publicKey       Bytes     @unique                   @map("public_key")
+  commitmentHash  String    @unique                   @map("commitment_hash")
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime  @default(now())           @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt                @map("updated_at") @db.Timestamptz
+  lastLoginAt     DateTime?                           @map("last_login_at") @db.Timestamptz
+  metadata        Json      @default("{}")
+
+  // Relations
+  sessions        Session[]
+  nullifiers      Nullifier[]
+  credentials     Credential[]
+  stepUpEvents    StepUpEvent[] @relation("StepUpUser")
+
+  @@index([commitmentHash])
+  @@map("users")
+  @@schema("auth")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFY
+
+  @@schema("auth")
+}
+
+// ─── Sessions ─────────────────────────────────────────────────────────────────
+// Issued JWT session tracking. Refresh tokens stored as SHA-256 hash — never raw.
+model Session {
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String      @map("user_id") @db.Uuid
+  refreshTokenHash    String      @unique @map("refresh_token_hash")
+  deviceFingerprint   String?     @map("device_fingerprint")
+  ipAddress           String?     @map("ip_address")          // stored as TEXT; INET via raw query
+  riskLevel           RiskLevel   @default(LOW) @map("risk_level")
+  isRevoked           Boolean     @default(false) @map("is_revoked")
+  expiresAt           DateTime    @map("expires_at") @db.Timestamptz
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  lastActiveAt        DateTime    @default(now()) @map("last_active_at") @db.Timestamptz
+
+  // Relations
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stepUpEvents        StepUpEvent[]
+
+  @@index([userId])
+  @@index([expiresAt])  // for cleanup jobs — WHERE is_revoked = false
+  @@map("sessions")
+  @@schema("auth")
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+  @@schema("auth")
+}
+
+// ─── ZKP Challenges ───────────────────────────────────────────────────────────
+// Ephemeral nonce records. Primary TTL enforcement is in Redis;
+// PostgreSQL copy serves as audit log and fallback for nullifier correlation.
+model ZkpChallenge {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String?         @map("user_id") @db.Uuid           // null for anonymous pre-auth challenges
+  nonce       Bytes           @unique                            // 32-byte random nonce
+  status      ChallengeStatus @default(PENDING)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt   DateTime        @map("expires_at") @db.Timestamptz  // now() + 120 seconds
+  consumedAt  DateTime?       @map("consumed_at") @db.Timestamptz
+
+  // Relations
+  nullifier   Nullifier?
+
+  @@index([nonce])
+  @@map("zkp_challenges")
+  @@schema("auth")
+}
+
+enum ChallengeStatus {
+  PENDING
+  CONSUMED
+  EXPIRED
+
+  @@schema("auth")
+}
+
+// ─── Nullifiers ───────────────────────────────────────────────────────────────
+// Append-only replay-prevention set.
+// nullifierHash: hex( H(secret || nonce) ) — the ZK circuit's public output.
+// SECURITY: No UPDATE or DELETE is permitted on this table.
+// Enforced via: Row-Level Security policy (applied in init migration SQL).
+model Nullifier {
+  nullifierHash   String       @id @map("nullifier_hash")        // hex string
+  userId          String       @map("user_id") @db.Uuid
+  challengeId     String?      @map("challenge_id") @db.Uuid
+  recordedAt      DateTime     @default(now()) @map("recorded_at") @db.Timestamptz
+
+  // Relations
+  user            User         @relation(fields: [userId], references: [id])
+  challenge       ZkpChallenge? @relation(fields: [challengeId], references: [id])
+
+  @@index([userId])
+  @@map("nullifiers")
+  @@schema("auth")
+}
+
+// ─── Step-Up Auth Events ──────────────────────────────────────────────────────
+// Audit trail for step-up authentication triggers and resolutions.
+model StepUpEvent {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId     String              @map("session_id") @db.Uuid
+  userId        String              @map("user_id") @db.Uuid
+  triggerReason String              @map("trigger_reason")   // e.g. RISK_SCORE_HIGH
+  riskScore     Decimal?            @map("risk_score") @db.Decimal(5, 4)
+  resolvedAt    DateTime?           @map("resolved_at") @db.Timestamptz
+  resolution    StepUpResolution?
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  session       Session             @relation(fields: [sessionId], references: [id])
+  user          User                @relation("StepUpUser", fields: [userId], references: [id])
+
+  @@index([sessionId])
+  @@map("step_up_events")
+  @@schema("auth")
+}
+
+enum StepUpResolution {
+  PASSED
+  FAILED
+  TIMED_OUT
+
+  @@schema("auth")
+}
+
+// =============================================================================
+// SCHEMA: zkp
+// =============================================================================
+
+// ─── Credential Types ─────────────────────────────────────────────────────────
+// Admin-defined credential templates. attributeSchema describes the shape of
+// attributes that will be committed into the Merkle tree.
+model CredentialType {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String       @unique
+  attributeSchema Json         @map("attribute_schema")  // { "clearance_level": "integer", ... }
+  circuitId       String       @map("circuit_id")        // references verification_keys.circuit_id
+  isActive        Boolean      @default(true) @map("is_active")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  credentials     Credential[]
+  verificationKey VerificationKey? @relation(fields: [circuitId], references: [circuitId])
+
+  @@map("credential_types")
+  @@schema("zkp")
+}
+
+// ─── Credentials ──────────────────────────────────────────────────────────────
+// One issued credential per user per credential type.
+// merkleRoot: hex-encoded Poseidon Merkle root commitment R.
+// RAW attribute values are NEVER stored — only hashes + salts in credential_leaves.
+model Credential {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String           @map("user_id") @db.Uuid
+  credentialTypeId    String           @map("credential_type_id") @db.Uuid
+  merkleRoot          String           @map("merkle_root")           // hex
+  attributeCount      Int              @map("attribute_count")
+  status              CredentialStatus @default(ACTIVE)
+  issuedAt            DateTime         @default(now()) @map("issued_at") @db.Timestamptz
+  expiresAt           DateTime?        @map("expires_at") @db.Timestamptz
+  revokedAt           DateTime?        @map("revoked_at") @db.Timestamptz
+  revocationReason    String?          @map("revocation_reason")
+
+  // Relations
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialType      CredentialType   @relation(fields: [credentialTypeId], references: [id])
+  leaves              CredentialLeaf[]
+  disclosureProofs    DisclosureProof[]
+
+  // One active credential per type per user
+  @@unique([userId, credentialTypeId])
+  @@index([userId])
+  @@map("credentials")
+  @@schema("zkp")
+}
+
+enum CredentialStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+
+  @@schema("zkp")
+}
+
+// ─── Credential Leaves ────────────────────────────────────────────────────────
+// Merkle tree leaves for a single credential.
+// leafHash: hex( Poseidon(attribute_value || salt) )
+// salt: 32-byte random — encrypted at rest via pgcrypto (applied in migration SQL).
+// IMPORTANT: raw attribute values are NEVER stored. Only hashes + salts.
+model CredentialLeaf {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  credentialId  String     @map("credential_id") @db.Uuid
+  leafIndex     Int        @map("leaf_index")          // 0-indexed position in Merkle tree
+  attributeName String     @map("attribute_name")
+  leafHash      String     @map("leaf_hash")           // hex
+  salt          Bytes                                  // 32-byte random salt (pgcrypto encrypted at rest)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  credential    Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@unique([credentialId, leafIndex])
+  @@index([credentialId])
+  @@map("credential_leaves")
+  @@schema("zkp")
+}
+
+// ─── Verification Keys ────────────────────────────────────────────────────────
+// SnarkJS-exported verification keys for each compiled circuit.
+// Loaded at gateway startup and cached in memory.
+// IMMUTABLE: a new row must be inserted for each circuit version; no updates.
+model VerificationKey {
+  circuitId   String   @id @map("circuit_id")   // e.g. "auth_v1", "disclosure_v1"
+  vkeyJson    Json     @map("vkey_json")         // full SnarkJS vKey object
+  curve       String   @default("bn254")
+  protocol    String   @default("groth16")
+  version     Int      @default(1)
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  // Relations
+  credentialTypes CredentialType[]
+
+  @@map("verification_keys")
+  @@schema("zkp")
+}
+
+// ─── Disclosure Proofs ────────────────────────────────────────────────────────
+// Audit log of selective disclosure claim verifications.
+// proofMetadata stores H(proof_bytes) and H(public_signals) — never raw proof.
+model DisclosureProof {
+  id                String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  credentialId      String     @map("credential_id") @db.Uuid
+  verifierId        String     @map("verifier_id")            // identifier of the verifying party
+  claimedPredicate  String     @map("claimed_predicate")      // e.g. "clearance_level >= 3"
+  proofValid        Boolean    @map("proof_valid")
+  verifiedAt        DateTime   @default(now()) @map("verified_at") @db.Timestamptz
+  proofMetadata     Json       @default("{}") @map("proof_metadata") // { proof_hash, signals_hash }
+
+  // Relations
+  credential        Credential @relation(fields: [credentialId], references: [id])
+
+  @@index([credentialId])
+  @@map("disclosure_proofs")
+  @@schema("zkp")
+}

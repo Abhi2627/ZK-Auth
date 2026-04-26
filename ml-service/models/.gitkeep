@@ -1,0 +1,7 @@
+# LSTM model artifacts go here.
+# These are large binary files — do not commit to git.
+# Use DVC, MLflow, or direct download from model registry in CI/CD.
+#
+# Expected files after Phase 3 training:
+#   lstm_v1/model.keras   — Keras SavedModel format
+#   lstm_v1/scaler.pkl    — fitted sklearn StandardScaler (joblib)

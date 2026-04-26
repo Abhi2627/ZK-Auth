@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package zkauth.behavior;
+
+option java_multiple_files = true;
+option java_package = "com.zkauth.behavior";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BehaviorAnalyzer Service
+// Bidirectional streaming RPC for real-time behavioral risk scoring.
+// The Node.js gateway streams raw BehaviorEvents from the WebSocket client;
+// the Python ML service returns a RiskScore after every sliding-window batch.
+// ─────────────────────────────────────────────────────────────────────────────
+service BehaviorAnalyzer {
+  // Bidirectional stream: one BehaviorEvent in → one RiskScore out (per window)
+  rpc StreamEvents (stream BehaviorEvent) returns (stream RiskScore);
+
+  // Unary: request the current aggregated risk score for a session
+  rpc GetSessionRisk (SessionRequest) returns (RiskScore);
+
+  // Server health probe used by Docker healthcheck and gateway startup
+  rpc HealthCheck (HealthRequest) returns (HealthResponse);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Messages
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Raw behavioral event emitted by the client and forwarded by the gateway.
+message BehaviorEvent {
+  string session_id     = 1;  // UUID of the active auth session
+  int64  timestamp_ms   = 2;  // Unix epoch milliseconds (client clock)
+  string event_type     = 3;  // MOUSE_MOVE | KEY_DOWN | KEY_UP | SCROLL | TOUCH | FOCUS_LOSS
+  float  mouse_velocity = 4;  // px/ms — 0 for non-mouse events
+  int32  key_dwell_ms   = 5;  // key hold duration in ms — 0 for non-keyboard events
+  float  scroll_delta   = 6;  // absolute scroll units — 0 for non-scroll events
+  float  touch_pressure = 7;  // 0.0–1.0 touch force (mobile only) — 0 for desktop
+  string page_context   = 8;  // SHA-256 hash of the current route/URL — no raw PII
+  int64  sequence_num   = 9;  // monotonically increasing per session; gap = dropped events
+}
+
+// Risk assessment result returned after each inference window.
+message RiskScore {
+  string session_id      = 1;  // echoed from the triggering event stream
+  float  score           = 2;  // 0.0 (normal) → 1.0 (high risk)
+  string risk_level      = 3;  // LOW | MEDIUM | HIGH | CRITICAL
+  string risk_reason     = 4;  // human-readable code, e.g. ANOMALOUS_TYPING_RHYTHM
+  int64  evaluated_at_ms = 5;  // Unix epoch ms when inference completed
+  int32  events_in_window = 6; // number of events that contributed to this score
+  string model_version   = 7;  // e.g. "lstm_v1" — for audit and A/B tracking
+}
+
+// Request a point-in-time risk snapshot for an existing session.
+message SessionRequest {
+  string session_id = 1;
+}
+
+// Health probe messages.
+message HealthRequest {}
+
+message HealthResponse {
+  bool   ok            = 1;
+  string model_version = 2;
+  int64  uptime_ms     = 3;
+}

@@ -1,0 +1,31 @@
+{
+  "name": "zk-auth",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ZK-Auth: Enterprise ZKP + ML Behavioral Authentication System (Monorepo Root)",
+  "workspaces": [
+    "packages/*",
+    "backend",
+    "web"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:web": "npm run dev --workspace=web",
+    "build:backend": "npm run build --workspace=backend",
+    "build:web": "npm run build --workspace=web",
+    "build:types": "npm run build --workspace=@zk-auth/types",
+    "proto:gen": "npm run generate --workspace=@zk-auth/proto",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:generate": "npm run db:generate --workspace=backend",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
