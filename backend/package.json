@@ -16,6 +16,8 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "proto:gen": "grpc_tools_node_protoc --plugin=protoc-gen-ts_proto=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_opt=esModuleInterop=true,outputServices=grpc-js --ts_proto_out=src/grpc/generated --proto_path=../packages/proto ../packages/proto/*.proto",
+    "circuit:compile:auth": "circom circuits/auth/auth.circom --r1cs --wasm --sym -o circuits/auth/",
+    "circuit:compile:disclosure": "circom circuits/disclosure/merkle_disclosure.circom --r1cs --wasm --sym -o circuits/disclosure/",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -24,6 +26,7 @@
     "@grpc/proto-loader": "^0.7.13",
     "@prisma/client": "^5.14.0",
     "@zk-auth/types": "*",
+    "circomlibjs": "^0.1.7",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "express": "^5.0.0",
@@ -31,6 +34,7 @@
     "helmet": "^7.1.0",
     "ioredis": "^5.4.1",
     "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0",
     "pino": "^9.2.0",
     "pino-http": "^10.2.0",
     "snarkjs": "^0.7.4",
@@ -39,11 +43,13 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/circomlibjs": "^0.1.6",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.9",
+    "@types/pg": "^8.11.6",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.10",
     "grpc-tools": "^1.12.4",

@@ -26,27 +26,27 @@ export type RiskReason =
 // ─── Telemetry Event (client → gateway → gRPC) ───────────────────────────────
 
 export interface BehaviorEvent {
-  session_id: string;
-  timestamp_ms: number;
-  event_type: BehaviorEventType;
-  mouse_velocity?: number;    // px/ms
-  key_dwell_ms?: number;      // ms
-  scroll_delta?: number;
-  touch_pressure?: number;    // 0.0–1.0 (mobile only)
-  page_context?: string;      // SHA-256 of route — no raw PII
-  sequence_num: number;       // monotonic counter per session
+  session_id:      string;
+  timestamp_ms:    number;
+  event_type:      BehaviorEventType;
+  mouse_velocity?: number;
+  key_dwell_ms?:   number;
+  scroll_delta?:   number;
+  touch_pressure?: number;
+  page_context?:   string;
+  sequence_num:    number;
 }
 
-// ─── Risk Score (gRPC response → gateway → WebSocket push) ───────────────────
+// ─── Risk Score ───────────────────────────────────────────────────────────────
 
 export interface RiskScoreResult {
-  session_id: string;
-  score: number;              // 0.0 → 1.0
-  risk_level: RiskLevel;
-  risk_reason: RiskReason;
-  evaluated_at_ms: number;
-  events_in_window: number;   // typically 50
-  model_version: string;
+  session_id:       string;
+  score:            number;
+  risk_level:       RiskLevel;
+  risk_reason:      RiskReason;
+  evaluated_at_ms:  number;
+  events_in_window: number;
+  model_version:    string;
 }
 
 // ─── WebSocket Message Envelope ──────────────────────────────────────────────
@@ -55,18 +55,23 @@ export type WsMessageType =
   | 'BEHAVIOR_EVENT'
   | 'RISK_UPDATE'
   | 'STEP_UP_REQUIRED'
+  | 'STEP_UP_RESOLVED'
   | 'SESSION_TERMINATED'
   | 'PING'
   | 'PONG';
 
 export interface WsMessage<T = unknown> {
-  type: WsMessageType;
+  type:    WsMessageType;
   payload: T;
-  ts: number;  // client-side Unix epoch ms
+  ts:      number;
 }
 
 export interface WsRiskUpdate {
-  score: number;
-  risk_level: RiskLevel;
+  score:       number;
+  risk_level:  RiskLevel;
   risk_reason: RiskReason;
+}
+
+export interface WsStepUpResolved {
+  session_id: string;
 }

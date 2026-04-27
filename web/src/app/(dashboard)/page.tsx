@@ -1,4 +1,10 @@
-// Dashboard — Phase 3 target
+'use client';
+
 export default function DashboardPage() {
-  return <div>Dashboard — Phase 3</div>;
+  return (
+    <main>
+      <h1>Dashboard</h1>
+      <p>Authenticated — Phase 7 will add full dashboard content.</p>
+    </main>
+  );
 }

@@ -1,24 +1,43 @@
 /**
  * Session Routes — /api/v1/session
- * WebSocket upgrade is handled separately in wsServer.ts.
- * These REST endpoints cover session introspection and revocation.
- * Phase 3 will implement full logic.
+ *
+ *   POST   /step-up/challenge  authMiddleware → postStepUpChallenge
+ *   POST   /step-up/resolve    authMiddleware → postStepUpResolve
+ *   GET    /me                 authMiddleware → riskGateMiddleware → getSessionMe
+ *   DELETE /:sessionId         authMiddleware → deleteSession
+ *   DELETE /all                authMiddleware → deleteAllSessions
+ *
+ * Note: WebSocket upgrade to /telemetry is handled in wsServer.ts,
+ * not through this router (HTTP upgrade bypasses Express routing).
  */
+
 import { Router } from 'express';
+import {
+  postStepUpChallenge,
+  postStepUpResolve,
+  getSessionMe,
+  deleteSession,
+  deleteAllSessions,
+} from '../controllers/session.controller.js';
+import { authMiddleware }    from '../middleware/auth.middleware.js';
+import { riskGateMiddleware } from '../middleware/riskGate.middleware.js';
+import { rateLimitMiddleware } from '../middleware/rateLimit.middleware.js';
 
 export const sessionRouter = Router();
 
-// GET /api/v1/session/me  — return current session state + risk level
-sessionRouter.get('/me', (_req, res) => {
-  res.status(501).json({ code: 'NOT_IMPLEMENTED', message: 'Phase 3 target' });
+const stepUpRateLimit = rateLimitMiddleware({
+  endpoint: 'step_up',
+  limit:    10,
+  windowSeconds: 60,
 });
 
-// DELETE /api/v1/session/:sessionId  — revoke a specific session
-sessionRouter.delete('/:sessionId', (_req, res) => {
-  res.status(501).json({ code: 'NOT_IMPLEMENTED', message: 'Phase 3 target' });
-});
+// Step-up challenge & resolve
+sessionRouter.post('/step-up/challenge', authMiddleware, stepUpRateLimit, postStepUpChallenge);
+sessionRouter.post('/step-up/resolve',   authMiddleware, stepUpRateLimit, postStepUpResolve);
 
-// DELETE /api/v1/session/all  — revoke all sessions for authenticated user
-sessionRouter.delete('/all', (_req, res) => {
-  res.status(501).json({ code: 'NOT_IMPLEMENTED', message: 'Phase 3 target' });
-});
+// Session introspection
+sessionRouter.get('/me', authMiddleware, riskGateMiddleware, getSessionMe);
+
+// Session revocation
+sessionRouter.delete('/all',         authMiddleware, deleteAllSessions);
+sessionRouter.delete('/:sessionId',  authMiddleware, deleteSession);

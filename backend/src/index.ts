@@ -1,13 +1,5 @@
 /**
- * ZK-Auth API Gateway — Entry Point
- *
- * Responsibilities:
- *  1. Validate environment configuration at startup (fail-fast).
- *  2. Initialise all infrastructure connections (DB, Redis, gRPC).
- *  3. Initialise ZKP service (load vKey into memory).
- *  4. Create the Express application and attach the HTTP server.
- *  5. Attach the WebSocket server to the HTTP server upgrade event.
- *  6. Start listening and register graceful-shutdown handlers.
+ * ZK-Auth API Gateway — Entry Point (Phase 5 — Telemetry DB added)
  */
 
 import http from 'http';
@@ -16,76 +8,73 @@ import { createApp } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { connectRedis, disconnectRedis } from './config/redis.js';
 import { connectGrpc, disconnectGrpc } from './config/grpc.js';
-import { attachWebSocketServer } from './websocket/wsServer.js';
+import { attachWebSocketServer, closeAllConnections } from './websocket/wsServer.js';
 import { zkpService } from './services/zkp/zkp.service.js';
+import { disclosureService } from './services/credential/disclosure.service.js';
+import { connectTelemetryDB, disconnectTelemetryDB } from './services/telemetry/telemetry.service.js';
+import { telemetryService } from './services/telemetry/telemetry.service.js';
+import { behaviorGrpcClient } from './grpc/behaviorClient.js';
 import { logger } from './utils/logger.js';
-
-// ─── Bootstrap ───────────────────────────────────────────────────────────────
 
 async function bootstrap(): Promise<void> {
   logger.info({ env: env.NODE_ENV, port: env.PORT }, 'ZK-Auth API Gateway starting…');
 
-  // 1. Connect to all infrastructure (fail-fast on any error)
+  // ── Infrastructure ────────────────────────────────────────────────────────
   await connectDatabase();
   await connectRedis();
+  await connectTelemetryDB();
   await connectGrpc();
 
-  // 2. Initialise ZKP service — load vKey into memory once
+  // ── ZKP services ──────────────────────────────────────────────────────────
   await zkpService.initialize();
+  await disclosureService.initialize();
 
-  // 3. Build Express application
+  // ── Application ───────────────────────────────────────────────────────────
   const app = createApp();
-
-  // 4. Create HTTP server (needed to share with WebSocket server)
   const server = http.createServer(app);
-
-  // 5. Attach WebSocket upgrade handler
   attachWebSocketServer(server);
 
-  // 6. Start listening
   server.listen(env.PORT, () => {
-    logger.info(
-      { port: env.PORT, pid: process.pid },
-      'ZK-Auth API Gateway ready',
-    );
+    logger.info({ port: env.PORT, pid: process.pid }, 'ZK-Auth API Gateway ready');
   });
 
-  // ─── Graceful Shutdown ────────────────────────────────────────────────────
-
+  // ── Graceful shutdown ─────────────────────────────────────────────────────
   const shutdown = async (signal: string): Promise<void> => {
-    logger.info({ signal }, 'Shutdown signal received, draining connections…');
+    logger.info({ signal }, 'Shutdown signal received…');
+
+    // 1. Stop accepting new WebSocket connections
+    closeAllConnections();
+
+    // 2. Close all active gRPC streams
+    behaviorGrpcClient.closeAll();
+
+    // 3. Flush any buffered telemetry to TimescaleDB
+    await telemetryService.flush();
 
     server.close(async () => {
       try {
         await disconnectGrpc();
+        await disconnectTelemetryDB();
         await disconnectRedis();
         await disconnectDatabase();
-        logger.info('All connections closed. Exiting cleanly.');
+        logger.info('Clean shutdown complete.');
         process.exit(0);
       } catch (err) {
-        logger.error(err, 'Error during graceful shutdown');
+        logger.error(err, 'Error during shutdown');
         process.exit(1);
       }
     });
 
     setTimeout(() => {
-      logger.error('Graceful shutdown timed out after 15s. Force-exiting.');
+      logger.error('Shutdown timeout — force exiting.');
       process.exit(1);
     }, 15_000).unref();
   };
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT',  () => shutdown('SIGINT'));
-
-  process.on('uncaughtException', (err) => {
-    logger.fatal(err, 'Uncaught exception — shutting down');
-    shutdown('uncaughtException');
-  });
-
-  process.on('unhandledRejection', (reason) => {
-    logger.fatal({ reason }, 'Unhandled promise rejection — shutting down');
-    shutdown('unhandledRejection');
-  });
+  process.on('uncaughtException', (err) => { logger.fatal(err, 'Uncaught exception'); shutdown('uncaughtException'); });
+  process.on('unhandledRejection', (reason) => { logger.fatal({ reason }, 'Unhandled rejection'); shutdown('unhandledRejection'); });
 }
 
 bootstrap().catch((err) => {

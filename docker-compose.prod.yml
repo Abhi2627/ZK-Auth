@@ -1,0 +1,250 @@
+version: '3.9'
+
+# ─── Production Docker Compose Override ───────────────────────────────────────
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Changes from dev:
+#   - All services built for production (NODE_ENV=production, no volume mounts)
+#   - TLS enforced on all inter-service communication
+#   - Resource limits (CPU + memory) applied to each service
+#   - Health check intervals tightened
+#   - Secrets injected via Docker secrets (never in ENV for prod)
+#   - Nginx reverse proxy added as TLS terminator
+#   - TimescaleDB and Redis have explicit volume retention policies
+
+services:
+
+  # ─── Nginx TLS Terminator ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: zkauth-nginx
+    restart: always
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/certs:/etc/nginx/certs:ro
+      # TLS certs managed by certbot/Let's Encrypt in production
+    depends_on:
+      - backend
+      - web
+    networks:
+      - zkauth-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 128M
+
+  # ─── PostgreSQL (auth + zkp schemas) ─────────────────────────────────────────
+  postgres:
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Named volume — data persists across container restarts/upgrades
+    command: >
+      postgres
+        -c ssl=on
+        -c ssl_cert_file=/var/lib/postgresql/server.crt
+        -c ssl_key_file=/var/lib/postgresql/server.key
+        -c max_connections=100
+        -c shared_buffers=256MB
+        -c effective_cache_size=1GB
+        -c maintenance_work_mem=64MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c log_min_duration_statement=200
+    networks:
+      - zkauth-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zkauth_root -d zkauth_db"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # ─── TimescaleDB (telemetry) ──────────────────────────────────────────────────
+  timescaledb:
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      # Data volume is separate from postgres — independent backup cadence
+    command: >
+      postgres
+        -c ssl=on
+        -c ssl_cert_file=/var/lib/postgresql/server.crt
+        -c ssl_key_file=/var/lib/postgresql/server.key
+        -c max_connections=50
+        -c shared_buffers=512MB
+        -c effective_cache_size=2GB
+        -c timescaledb.max_background_workers=8
+    networks:
+      - zkauth-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zkauth_root -d zkauth_telemetry"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+
+  # ─── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    command: >
+      sh -c "redis-server
+        --requirepass $$(cat /run/secrets/redis_password)
+        --tls-port 6380
+        --port 0
+        --tls-cert-file /tls/redis.crt
+        --tls-key-file /tls/redis.key
+        --tls-ca-cert-file /tls/ca.crt
+        --tls-auth-clients yes
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --appendonly yes
+        --appendfsync everysec
+        --save 900 1
+        --save 300 10
+        --save 60 10000"
+    secrets:
+      - redis_password
+    volumes:
+      - redis_data:/data
+      - ./infra/certs/redis:/tls:ro
+    networks:
+      - zkauth-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  # ─── API Gateway (Production build) ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production        # multi-stage: production stage only
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+    env_file: []               # no .env files in production — use secrets
+    secrets:
+      - jwt_access_secret
+      - jwt_refresh_secret
+      - issuer_secret_token
+    volumes: []                # no source mounts in production
+    networks:
+      - zkauth-internal
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', r => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      replicas: 2              # two backend replicas behind nginx upstream
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # ─── ML gRPC Service (Production) ─────────────────────────────────────────────
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    environment:
+      GRPC_INSECURE: "false"
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    volumes:
+      - ./ml-service/models:/app/models:ro  # model artifacts read-only
+      - ./infra/certs/grpc:/app/certs:ro
+    networks:
+      - zkauth-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G          # LSTM inference can spike; reserve headroom
+      restart_policy:
+        condition: on-failure
+
+  # ─── Next.js Web Client ────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes: []
+    networks:
+      - zkauth-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+# ─── Secrets (managed by Docker Swarm or external secret manager) ─────────────
+secrets:
+  postgres_password:
+    external: true
+  redis_password:
+    external: true
+  jwt_access_secret:
+    external: true
+  jwt_refresh_secret:
+    external: true
+  issuer_secret_token:
+    external: true
+
+# ─── Volumes (named — data persists across upgrades) ─────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /var/lib/zkauth/postgres
+      o: bind
+  timescale_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /var/lib/zkauth/timescale
+      o: bind
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /var/lib/zkauth/redis
+      o: bind
+
+# ─── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  zkauth-internal:
+    driver: bridge
+    internal: true            # no external access — all traffic via nginx

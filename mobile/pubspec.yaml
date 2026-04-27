@@ -1,5 +1,5 @@
 name: zk_auth
-description: "ZK-Auth Flutter mobile client"
+description: "ZK-Auth Flutter mobile client — passwordless ZKP authentication"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -11,30 +11,55 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # HTTP client
-  dio: ^5.4.3+1
-
-  # State management
+  # ─── State management ────────────────────────────────────────────────────────
   flutter_bloc: ^8.1.5
   equatable: ^2.0.5
+  bloc: ^8.1.4
 
-  # Secure storage (JWT refresh token)
+  # ─── HTTP client ─────────────────────────────────────────────────────────────
+  dio: ^5.4.3+1
+  # Interceptors: auth token injection, retry on 401
+
+  # ─── Secure storage (JWT tokens + ZKP secret) ─────────────────────────────
   flutter_secure_storage: ^9.0.0
+  # iOS: Keychain, Android: EncryptedSharedPreferences
 
-  # WebSocket
+  # ─── WebSocket ────────────────────────────────────────────────────────────────
   web_socket_channel: ^3.0.0
 
-  # ZKP (Phase 3: evaluate flutter_js or FFI-based snarkjs WASM interop)
-  # flutter_js: ^0.8.0   # candidate — deferred to Phase 3 evaluation
+  # ─── ZKP prover bridge ───────────────────────────────────────────────────────
+  # flutter_js: runs snarkjs WASM inside a JavaScriptCore/V8 context.
+  # The prover runs in a Dart isolate so the UI thread is never blocked.
+  flutter_js: ^0.8.0
 
-  # Utilities
+  # ─── Mobile telemetry ────────────────────────────────────────────────────────
+  sensors_plus: ^5.0.1
+  # Gyroscope + accelerometer streams at ~50Hz
+
+  # ─── Navigation ──────────────────────────────────────────────────────────────
+  go_router: ^14.1.4
+
+  # ─── Utilities ───────────────────────────────────────────────────────────────
   uuid: ^4.4.0
+  crypto: ^3.0.3           # SHA-256 for page_context hashing
+  convert: ^3.1.1          # hex encoding/decoding
+
+  # ─── UI ──────────────────────────────────────────────────────────────────────
+  flutter_svg: ^2.0.10+1
+  gap: ^3.0.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
   bloc_test: ^9.1.7
+  mocktail: ^1.0.4
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/circuits/
+    # Circuit artifacts placed here after compilation:
+    #   assets/circuits/auth.wasm  — compiled circuit WASM
+    #   assets/circuits/auth.zkey  — proving key
+    # These are large files; use flutter_gen or download at first launch in prod.
