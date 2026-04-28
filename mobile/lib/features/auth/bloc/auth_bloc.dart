@@ -36,6 +36,10 @@ class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }
 
+class AuthRegisterDevice extends AuthEvent {
+  const AuthRegisterDevice();
+}
+
 // ─── States ───────────────────────────────────────────────────────────────────
 
 abstract class AuthState extends Equatable {
@@ -87,6 +91,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         super(const AuthInitial()) {
     on<AuthInitialised>(_onInitialised);
     on<AuthLoginRequested>(_onLoginRequested);
+    on<AuthRegisterDevice>(_onRegisterDevice);
     on<AuthStepUpRequired>(_onStepUpRequired);
     on<AuthStepUpResolveRequested>(_onStepUpResolve);
     on<AuthLogoutRequested>(_onLogout);
@@ -201,5 +206,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await _authApi.logout().catchError((_) {});
     await _storage.clearSession();
     emit(const AuthLoggedOut());
+  }
+
+  // ─── Register Device ───────────────────────────────────────────────────────
+
+  Future<void> _onRegisterDevice(
+    AuthRegisterDevice event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthCheckingStorage());
+      // Generate a new secret (random 32 bytes as hex)
+      final secret = _prover.generateSecret();
+      // Save to secure storage
+      await _storage.saveSecret(secret);
+      // Transition to idle state so user can now login
+      emit(const AuthIdle());
+    } catch (e) {
+      emit(AuthError(message: 'Failed to register device: ${e.toString()}'));
+    }
   }
 }

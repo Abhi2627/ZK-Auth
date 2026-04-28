@@ -1,9 +1,6 @@
 /**
- * Issuer Controller — Mock Government / University Identity Provider
- *
- * DEMO MODE: This controller is fully self-contained.
- * It upserts the demo user and credential type on every call so the
- * portal works without any prior registration or database seeding.
+ * Issuer Controller — Self-contained demo mode.
+ * Upserts all required DB records so no prior seeding is needed.
  */
 
 import type { Request, Response, NextFunction } from 'express';
@@ -14,13 +11,12 @@ import { ValidationError } from '../../utils/errors.js';
 import { logger }         from '../../utils/logger.js';
 import crypto             from 'crypto';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const GOV_ISSUER_DID          = 'did:web:gov.zk-auth.io';
 const DEMO_USER_ID            = '00000000-0000-0000-0000-000000000001';
 const DEMO_CREDENTIAL_TYPE_ID = '00000000-0000-0000-0000-000000000002';
+const DEMO_CIRCUIT_ID         = 'merkle_disclosure_v1';
 
-// ─── Input validation ─────────────────────────────────────────────────────────
+// ─── Input schema ─────────────────────────────────────────────────────────────
 
 const issueIdSchema = z.object({
   holder_did:     z.string().min(7).max(256),
@@ -28,7 +24,7 @@ const issueIdSchema = z.object({
   full_name:      z.string().min(1).max(128),
   date_of_birth:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
   id_number:      z.string().min(1).max(32),
-  nationality:    z.string().length(2).toUpperCase(),
+  nationality:    z.string().min(2).max(3),
   validity_years: z.coerce.number().int().min(1).max(100).default(10),
 }).strict();
 
@@ -36,12 +32,9 @@ const issueIdSchema = z.object({
 
 function crc32(str: string): number {
   let crc = 0xFFFFFFFF;
-  const bytes = Buffer.from(str, 'utf8');
-  for (const byte of bytes) {
-    crc = crc ^ byte;
-    for (let j = 0; j < 8; j++) {
-      crc = (crc & 1) ? (crc >>> 1) ^ 0xEDB88320 : crc >>> 1;
-    }
+  for (const byte of Buffer.from(str, 'utf8')) {
+    crc ^= byte;
+    for (let j = 0; j < 8; j++) crc = (crc & 1) ? (crc >>> 1) ^ 0xEDB88320 : crc >>> 1;
   }
   return (crc ^ 0xFFFFFFFF) >>> 0;
 }
@@ -55,55 +48,55 @@ function encodeNationality(a2: string): number {
   return ISO_3166[a2.toUpperCase()] ?? crc32(a2) % 1000;
 }
 
-function encodeDob(iso: string): number {
-  return parseInt(iso.replace(/-/g, ''), 10);
-}
-
 function computeAge(iso: string): number {
-  const dob = new Date(iso);
-  const now = new Date();
-  let age   = now.getFullYear() - dob.getFullYear();
-  const m   = now.getMonth() - dob.getMonth();
+  const dob = new Date(iso), now = new Date();
+  let age = now.getFullYear() - dob.getFullYear();
+  const m = now.getMonth() - dob.getMonth();
   if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
   return Math.max(0, age);
 }
 
-function poseidonMock(value: number, saltHex: string): string {
-  // Mock Poseidon: SHA-256(value || salt) truncated to 31 bytes → hex
-  return crypto
-    .createHash('sha256')
-    .update(`${value}:${saltHex}`)
-    .digest('hex')
-    .slice(0, 62);
+function sha256Hash(value: number, salt: string): string {
+  return crypto.createHash('sha256').update(`${value}:${salt}`).digest('hex').slice(0, 62);
 }
 
-// ─── Ensure demo DB records exist ─────────────────────────────────────────────
+// ─── Ensure demo DB rows ──────────────────────────────────────────────────────
 
 async function ensureDemoRecords(): Promise<void> {
-  // Upsert demo user
-  await prisma.user.upsert({
-    where: { id: DEMO_USER_ID },
+  // 1. VerificationKey (required by CredentialType FK)
+  await prisma.verificationKey.upsert({
+    where:  { circuitId: DEMO_CIRCUIT_ID },
     create: {
-      id:             DEMO_USER_ID,
-      publicKey:      Buffer.alloc(32, 0),
-      commitmentHash: '1234567890',
-      status:         'ACTIVE',
+      circuitId:  DEMO_CIRCUIT_ID,
+      vkeyJson:   { demo: true, circuit: 'merkle_disclosure_v1' },
+      curve:      'bn254',
+      protocol:   'groth16',
+      version:    1,
     },
     update: {},
   });
 
-  // Upsert credential type
+  // 2. CredentialType
   await prisma.credentialType.upsert({
-    where: { id: DEMO_CREDENTIAL_TYPE_ID },
+    where:  { id: DEMO_CREDENTIAL_TYPE_ID },
     create: {
       id:              DEMO_CREDENTIAL_TYPE_ID,
       name:            'GovernmentID',
-      version:         '1.0',
-      attributeSchema: {
-        attributes: ['age', 'dob_encoded', 'id_hash', 'name_hash', 'nationality'],
-        treeDepth:  8,
-      },
-      isActive: true,
+      circuitId:       DEMO_CIRCUIT_ID,
+      attributeSchema: { attributes: ['age','dob_encoded','id_hash','name_hash','nationality'], treeDepth: 8 },
+      isActive:        true,
+    },
+    update: {},
+  });
+
+  // 3. Demo user (commitment_hash must be unique — use user_id as placeholder)
+  await prisma.user.upsert({
+    where:  { id: DEMO_USER_ID },
+    create: {
+      id:             DEMO_USER_ID,
+      publicKey:      Buffer.alloc(32, 0),
+      commitmentHash: 'demo_commitment_hash_00000000000001',
+      status:         'ACTIVE',
     },
     update: {},
   });
@@ -124,15 +117,14 @@ export async function postIssueId(
     }
     const body = parsed.data;
 
-    // Ensure demo records exist (idempotent)
     await ensureDemoRecords();
 
     const userId = body.user_id ?? DEMO_USER_ID;
 
-    // ── 1. Encode attributes ──────────────────────────────────────────────────
+    // ── Build attribute map ───────────────────────────────────────────────────
     const attributeValues: Record<string, number> = {
       age:         computeAge(body.date_of_birth),
-      dob_encoded: encodeDob(body.date_of_birth),
+      dob_encoded: parseInt(body.date_of_birth.replace(/-/g, ''), 10),
       name_hash:   crc32(body.full_name.toLowerCase().trim()),
       id_hash:     crc32(body.id_number),
       nationality: encodeNationality(body.nationality),
@@ -140,75 +132,77 @@ export async function postIssueId(
 
     const sortedKeys = Object.keys(attributeValues).sort();
 
-    // ── 2. Generate salts + leaf hashes (mock Poseidon) ───────────────────────
+    // ── Generate salts + leaf hashes ─────────────────────────────────────────
     const salts:      Record<string, string> = {};
     const leafHashes: Record<string, string> = {};
 
     for (const key of sortedKeys) {
-      const salt        = crypto.randomBytes(16).toString('hex');
-      salts[key]        = salt;
-      leafHashes[key]   = poseidonMock(attributeValues[key]!, salt);
+      const salt  = crypto.randomBytes(16).toString('hex');
+      salts[key]  = salt;
+      leafHashes[key] = sha256Hash(attributeValues[key]!, salt);
     }
 
-    // ── 3. Build mock Merkle root (SHA-256 of sorted leaf hashes) ─────────────
+    // ── Build Merkle root ─────────────────────────────────────────────────────
     const merkleRoot = crypto
       .createHash('sha256')
       .update(sortedKeys.map((k) => leafHashes[k]).join(':'))
       .digest('hex');
 
-    // ── 4. Persist credential to database ─────────────────────────────────────
+    // ── Persist to DB ─────────────────────────────────────────────────────────
     const credentialId = crypto.randomUUID();
     const issuedAt     = new Date();
     const expiresAt    = new Date();
     expiresAt.setFullYear(expiresAt.getFullYear() + body.validity_years);
 
     await prisma.$transaction(async (tx) => {
+      // Delete any existing credential for this user+type (allow re-issuance in demo)
+      await tx.credential.deleteMany({
+        where: { userId, credentialTypeId: DEMO_CREDENTIAL_TYPE_ID },
+      });
+
       await tx.credential.create({
         data: {
           id:               credentialId,
           userId,
           credentialTypeId: DEMO_CREDENTIAL_TYPE_ID,
           merkleRoot,
+          attributeCount:   sortedKeys.length,
           status:           'ACTIVE',
           expiresAt,
-          metadata: {
-            issuerDid: GOV_ISSUER_DID,
-            holderDid: body.holder_did,
-          },
+          metadata: { issuerDid: GOV_ISSUER_DID, holderDid: body.holder_did },
         },
       });
 
-      // Store leaf hashes (salts intentionally not stored server-side)
       for (let i = 0; i < sortedKeys.length; i++) {
         const key = sortedKeys[i]!;
         await tx.credentialLeaf.create({
           data: {
             credentialId,
-            leafIndex:  i,
-            leafHash:   leafHashes[key]!,
-            // salt stored in leaf so wallet can regenerate proofs
-            salt:       Buffer.from(salts[key]!, 'hex'),
+            leafIndex:     i,
+            attributeName: key,
+            leafHash:      leafHashes[key]!,
+            salt:          Buffer.from(salts[key]!, 'hex'),
           },
         });
       }
     });
 
-    // ── 5. Wrap in W3C VC ────────────────────────────────────────────────────
+    // ── Wrap in W3C VC ────────────────────────────────────────────────────────
     const vc = vcBuilder.buildVC({
       credentialId,
-      issuerDid:       GOV_ISSUER_DID,
-      holderDid:       body.holder_did,
-      credentialType:  'GovernmentID',
-      attributeNames:  sortedKeys,
+      issuerDid:      GOV_ISSUER_DID,
+      holderDid:      body.holder_did,
+      credentialType: 'GovernmentID',
+      attributeNames: sortedKeys,
       leafHashes,
       salts,
       merkleRoot,
-      circuitId:       'merkle_disclosure_v1',
+      circuitId:      DEMO_CIRCUIT_ID,
       issuedAt,
       expiresAt,
     });
 
-    logger.info({ credentialId, userId, holderDid: body.holder_did }, 'Government ID issued');
+    logger.info({ credentialId, userId }, 'Government ID issued as W3C VC');
 
     res.status(201).json({
       credential_id:         credentialId,
@@ -219,7 +213,7 @@ export async function postIssueId(
       issuer_did:            GOV_ISSUER_DID,
       issued_at:             issuedAt.toISOString(),
       expires_at:            expiresAt.toISOString(),
-      privacy_notice:        'Raw PII was never stored. Only Poseidon commitments are persisted.',
+      privacy_notice:        'Raw PII was never stored. Only SHA-256 commitments persisted.',
     });
   } catch (err) {
     next(err);
@@ -229,7 +223,7 @@ export async function postIssueId(
 // ─── GET /api/issuer/did-document ─────────────────────────────────────────────
 
 export async function getIssuerDIDDocument(
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {

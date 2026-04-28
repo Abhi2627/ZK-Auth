@@ -1,6 +1,6 @@
 'use client';
 
-import { LoginForm } from '../../components/AuthFlow/LoginForm';
+import { LoginForm } from '../../../components/AuthFlow/LoginForm';
 import { useRouter }  from 'next/navigation';
 
 export default function LoginPage() {

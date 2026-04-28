@@ -107,7 +107,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 16),
                     // Phase 7: generate + save secret on device
                     OutlinedButton(
-                      onPressed: () {/* TODO: register flow */},
+                      onPressed: () {
+                        context.read<AuthBloc>().add(const AuthRegisterDevice());
+                      },
                       child: const Text('Register New Device'),
                     ),
                   ] else ...[
