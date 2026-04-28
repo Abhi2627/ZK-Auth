@@ -14,7 +14,7 @@
 
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { VerifiableCredential } from '../../lib/types/vc.types.js';
+import type { VerifiableCredential } from '../../lib/types/vc.types';
 
 interface DocumentVaultProps {
   credentials: StoredCredential[];

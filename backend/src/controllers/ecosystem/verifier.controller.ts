@@ -38,7 +38,6 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { z }                           from 'zod';
-import { groth16 }                     from 'snarkjs';
 import { prisma }                      from '../../config/database.js';
 import { redis }                       from '../../config/redis.js';
 import { didRegistry }                 from '../../services/identity/did.registry.js';
@@ -81,7 +80,7 @@ const requestProofSchema = z.object({
     z.object({
       attribute_name:    z.string().min(1).max(64),
       predicate:         z.enum(['GTE', 'LTE', 'EQ']),
-      threshold:         z.number().int().nonneg(),
+      threshold:         z.number().int().min(0),
       display_label:     z.string().max(128),
       privacy_statement: z.string().max(256),
     })
@@ -110,7 +109,7 @@ export async function postRequestProof(
     const body = parsed.data;
 
     // Build typed RequestedClaim array
-    const requestedClaims: RequestedClaim[] = body.claims.map((c) => ({
+    const requestedClaims: RequestedClaim[] = body.claims.map((c): RequestedClaim => ({
       attributeName:    c.attribute_name,
       credentialType:   body.credential_type,
       predicate:        c.predicate,
@@ -172,7 +171,7 @@ export async function postVerifyPresentation(
     }
 
     const { verifiable_presentation: vpRaw, request_id } = parsed.data;
-    const vp = vpRaw as VerifiablePresentation;
+    const vp = vpRaw as unknown as VerifiablePresentation;
 
     // ── Step 1: Structural validation ─────────────────────────────────────
     if (!Array.isArray(vp.type) || !vp.type.includes('VerifiablePresentation')) {

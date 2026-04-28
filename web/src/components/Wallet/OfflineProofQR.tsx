@@ -21,7 +21,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { VerifiablePresentation }                       from '../../lib/types/vc.types.js';
+import type { VerifiablePresentation }                       from '../../lib/types/vc.types';
 
 interface OfflineProofQRProps {
   vp:         VerifiablePresentation | null;

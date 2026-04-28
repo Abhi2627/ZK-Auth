@@ -127,14 +127,14 @@ enum ChallengeStatus {
 // SECURITY: No UPDATE or DELETE is permitted on this table.
 // Enforced via: Row-Level Security policy (applied in init migration SQL).
 model Nullifier {
-  nullifierHash   String       @id @map("nullifier_hash")        // hex string
-  userId          String       @map("user_id") @db.Uuid
-  challengeId     String?      @map("challenge_id") @db.Uuid
-  recordedAt      DateTime     @default(now()) @map("recorded_at") @db.Timestamptz
+  nullifierHash  String        @id @map("nullifier_hash")        // hex string
+  userId         String        @map("user_id") @db.Uuid
+  challengeId    String?       @unique @map("challenge_id") @db.Uuid
+  recordedAt     DateTime      @default(now()) @map("recorded_at") @db.Timestamptz
 
   // Relations
-  user            User         @relation(fields: [userId], references: [id])
-  challenge       ZkpChallenge? @relation(fields: [challengeId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  challenge      ZkpChallenge? @relation(fields: [challengeId], references: [id])
 
   @@index([userId])
   @@map("nullifiers")

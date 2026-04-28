@@ -23,7 +23,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { getAccessToken } from '../lib/api.js';
+import { getAccessToken } from '../lib/api';
 import type { WsMessage, WsMessageType } from '@zk-auth/types';
 
 const WS_BASE =

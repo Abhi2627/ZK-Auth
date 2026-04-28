@@ -29,7 +29,7 @@
  * be served with Cache-Control: immutable and a content-hash in the filename.
  */
 
-import type { AuthWitnessInput } from './witness.js';
+import type { AuthWitnessInput } from './witness';
 import type { Groth16Proof } from '@zk-auth/types';
 
 // Circuit artifact paths (relative to Next.js /public directory)

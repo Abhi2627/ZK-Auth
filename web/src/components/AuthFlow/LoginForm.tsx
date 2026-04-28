@@ -17,15 +17,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { fetchChallenge, submitProof, ApiClientError } from '../../lib/api.js';
+import { fetchChallenge, submitProof, ApiClientError } from '../../lib/api';
 import {
   buildAuthWitness,
   loadSecretFromStorage,
   generateRegistrationSecret,
   saveSecretToStorage,
-} from '../../lib/zkp/witness.js';
-import { generateAuthProof, preloadCircuitArtifacts } from '../../lib/zkp/prover.js';
-import { CryptoOverlay, type CryptoStateText, CRYPTO_STATES } from './CryptoOverlay.js';
+} from '../../lib/zkp/witness';
+import { generateAuthProof, preloadCircuitArtifacts } from '../../lib/zkp/prover';
+import { CryptoOverlay, type CryptoStateText, CRYPTO_STATES } from './CryptoOverlay';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

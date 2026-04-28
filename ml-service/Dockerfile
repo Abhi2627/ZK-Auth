@@ -47,6 +47,8 @@ RUN groupadd --gid 1001 mluser && \
 
 USER mluser
 
+ENV PYTHONPATH=/app
+
 EXPOSE 50051
 
 HEALTHCHECK --interval=15s --timeout=10s --start-period=20s --retries=5 \

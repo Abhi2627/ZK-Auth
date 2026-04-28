@@ -101,7 +101,12 @@ export async function postStepUpResolve(
     }
 
     const verifyResult = await zkpService.verify({
-      proof,
+      proof: {
+        ...proof,
+        pi_a: proof.pi_a as [string, string, string],
+        pi_b: proof.pi_b as [[string, string], [string, string], [string, string]],
+        pi_c: proof.pi_c as [string, string, string],
+      },
       publicSignals:  public_signals,
       challengeNonce: challengePayload.nonce,
     });

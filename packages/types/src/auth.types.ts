@@ -12,6 +12,16 @@ export type ChallengeStatus = 'PENDING' | 'CONSUMED' | 'EXPIRED';
 
 export type StepUpResolution = 'PASSED' | 'FAILED' | 'TIMED_OUT';
 
+// ─── Groth16 Proof Shape ─────────────────────────────────────────────────────
+
+export interface Groth16Proof {
+  pi_a:     [string, string, string];
+  pi_b:     [[string, string], [string, string], [string, string]];
+  pi_c:     [string, string, string];
+  protocol: 'groth16';
+  curve:    'bn254';
+}
+
 // ─── Challenge / Nonce ───────────────────────────────────────────────────────
 
 export interface ChallengeRequest {
@@ -29,14 +39,7 @@ export interface ChallengeResponse {
 
 export interface ProofSubmission {
   challenge_id: string;
-  /** JSON-serialized SnarkJS Groth16 proof object */
-  proof: {
-    pi_a: string[];
-    pi_b: string[][];
-    pi_c: string[];
-    protocol: 'groth16';
-    curve: 'bn254';
-  };
+  proof: Groth16Proof;
   /** [nullifier_hash, commitment_root] */
   public_signals: [string, string];
 }

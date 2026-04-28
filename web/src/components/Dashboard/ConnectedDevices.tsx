@@ -13,7 +13,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion }                  from 'framer-motion';
-import { getAccessToken }                           from '../../lib/api.js';
+import { getAccessToken }                           from '../../lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

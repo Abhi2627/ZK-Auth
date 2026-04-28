@@ -15,9 +15,13 @@ import signal
 import sys
 import time
 from concurrent import futures
+from pathlib import Path
 
 import grpc
 import structlog
+
+# Add proto directory to path so generated grpc files can import behavior_pb2
+sys.path.insert(0, str(Path(__file__).parent.parent / "proto"))
 
 from src.config import settings
 from src.servicer.behavior_servicer import BehaviorAnalyzerServicer

@@ -13,7 +13,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { AnimatePresence, motion }       from 'framer-motion';
-import type { ProofRequest, RequestedClaim } from '../../lib/types/vc.types.js';
+import type { ProofRequest, RequestedClaim } from '../../lib/types/vc.types';
 
 interface ConsentModalProps {
   request:    ProofRequest | null;
