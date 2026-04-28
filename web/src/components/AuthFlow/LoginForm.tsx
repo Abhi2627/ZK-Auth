@@ -25,6 +25,7 @@ import {
   saveSecretToStorage,
 } from '../../lib/zkp/witness.js';
 import { generateAuthProof, preloadCircuitArtifacts } from '../../lib/zkp/prover.js';
+import { CryptoOverlay, type CryptoStateText, CRYPTO_STATES } from './CryptoOverlay.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,11 @@ interface LoginFormProps {
 export function LoginForm({ onSuccess }: LoginFormProps) {
   const [state, setState] = useState<LoginState>({ status: 'idle' });
   const [hasSecret, setHasSecret] = useState(false);
+  const [cryptoState, setCryptoState] = useState<CryptoStateText | null>(null);
+
+  const overlayVisible = ['challenging', 'proving', 'submitting'].includes(
+    state.status,
+  );
 
   useEffect(() => {
     // Preload circuit artifacts into browser cache
@@ -79,25 +85,32 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     try {
       // Step 1: Fetch challenge nonce
       setState({ status: 'challenging' });
+      setCryptoState(CRYPTO_STATES[0]);
       const challenge = await fetchChallenge();
 
       // Step 2: Build witness and generate proof (Web Worker)
       setState({ status: 'proving' });
+      setCryptoState(CRYPTO_STATES[1]);
       const witness = buildAuthWitness(challenge.nonce, secretHex);
+
+      setCryptoState(CRYPTO_STATES[2]);
       const { proof, publicSignals } = await generateAuthProof(witness);
 
       // Step 3: Submit proof to gateway
       setState({ status: 'submitting' });
+      setCryptoState(CRYPTO_STATES[3]);
       const tokens = await submitProof({
         challenge_id:   challenge.challenge_id,
         proof,
         public_signals: publicSignals,
       });
 
+      setCryptoState(null);
       setState({ status: 'success', sessionId: tokens.session_id });
       onSuccess?.(tokens.session_id, tokens.access_token);
 
     } catch (err) {
+      setCryptoState(null);
       const message =
         err instanceof ApiClientError
           ? err.message
@@ -116,6 +129,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
   return (
     <div className="login-form">
+      {/* Crypto telemetry overlay — renders above all content during proof generation */}
+      <CryptoOverlay visible={overlayVisible} currentState={cryptoState} />
+
       <h1>ZK-Auth</h1>
       <p className="subtitle">Passwordless zero-knowledge authentication</p>
 

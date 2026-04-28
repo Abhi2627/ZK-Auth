@@ -1,33 +1,36 @@
 /**
- * Session Controller — Step-Up Auth Resolution
+ * Session Controller — Step-Up Auth Resolution + Device Management
  *
  * POST /session/step-up/challenge  — issue a fresh ZKP challenge for re-auth
- * POST /session/step-up/resolve    — verify proof, reset risk, clear step-up flag
- * GET  /session/me                 — current session state
- * DELETE /session/:sessionId       — revoke session
- * DELETE /session/all              — revoke all sessions
+ * POST /session/step-up/resolve    — verify proof, reset risk, unlock session
+ * GET  /session/me                 — current session state + step-up flag
+ * GET  /session/devices            — list all active sessions with device info
+ * POST /session/revoke/:sessionId  — two-phase revoke: Redis DEL + PG is_revoked
+ * DELETE /session/:sessionId       — alias for POST /session/revoke/:sessionId
+ * DELETE /session/all              — revoke all sessions for authenticated user
  *
- * ─── Step-Up Resolve flow ─────────────────────────────────────────────────────
- *   1. [authMiddleware]    Verify access token → session context.
- *   2. [Zod]              Validate proof payload.
- *   3. [ChallengeService] Fetch and validate the step-up challenge nonce.
- *   4. [NullifierService] Fast pre-check for replay.
- *   5. [ZkpService]       Verify Groth16 proof with constant-time padding.
- *   6. [ChallengeService] Consume challenge (Redis DEL).
- *   7. [NullifierService] Two-phase register nullifier.
- *   8. [RiskService]      resolveStepUp() — clear Redis step-up key,
- *                         reset riskLevel to LOW in session cache.
- *   9. [WsServer]         pushToSession() — emit STEP_UP_RESOLVED over WebSocket.
- *  10. Return { resolved: true }.
+ * ─── Device listing security ──────────────────────────────────────────────────
+ *   GET /session/devices returns sessions for the AUTHENTICATED user only.
+ *   Ownership is validated via the JWT sub claim (userId in res.locals.session).
+ *   No session data from other users is ever returned.
  *
- * Crucially: step-up resolve does NOT issue a new JWT. The existing access
- * token remains valid — only the risk state in Redis is reset. This is the
- * correct model: the user's identity was already verified at login; we are
- * re-verifying liveness, not re-issuing credentials.
+ * ─── Two-phase revoke (T11 mitigation) ────────────────────────────────────────
+ *   Phase 1: Redis DEL session:{id} — immediately invalidates the cache
+ *            so the next authenticated request to the gateway cannot
+ *            read a valid risk level and will fall through to PG verification.
+ *   Phase 2: PG UPDATE sessions SET is_revoked = true — durable record.
+ *            The auth middleware's PG fallback path will see is_revoked=true
+ *            and return 401 TOKEN_REVOKED for any in-flight access tokens.
+ *
+ *   Ordering matters: Redis first, PG second. If PG fails after Redis DEL,
+ *   the session is effectively dead (no cache entry) but the PG record
+ *   is inconsistent. A background cleanup job (Phase 9) reconciles these.
+ *   If Redis fails and PG succeeds, the session cache is stale but PG
+ *   revocation still blocks the session on the next PG fallback check.
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { challengeService } from '../services/zkp/challenge.service.js';
+import { challengeService }  from '../services/zkp/challenge.service.js';
 import { nullifierService }  from '../services/zkp/nullifier.service.js';
 import { zkpService }        from '../services/zkp/zkp.service.js';
 import { sessionService }    from '../services/session/session.service.js';
@@ -51,7 +54,6 @@ export async function postStepUpChallenge(
   try {
     const session = res.locals['session'] as AuthenticatedSession;
 
-    // Verify that a step-up is actually pending for this session
     const pending = await redis.get(RedisKeys.stepUp(session.sessionId));
     if (!pending) {
       throw new AppError(
@@ -61,7 +63,6 @@ export async function postStepUpChallenge(
       );
     }
 
-    // Issue a challenge bound to this user
     const challenge = await challengeService.issue(session.userId);
 
     res.status(200).json({
@@ -83,76 +84,53 @@ export async function postStepUpResolve(
 ): Promise<void> {
   try {
     const session = res.locals['session'] as AuthenticatedSession;
-
-    // Step 1: Validate request body (same shape as /auth/verify)
-    const body = parseBody(verifyRequestSchema, req.body);
+    const body    = parseBody(verifyRequestSchema, req.body);
     const { challenge_id, proof, public_signals } = body;
     const [nullifierHash] = public_signals;
 
-    // Step 2: Confirm step-up is pending (prevent resolve without prior trigger)
     const pending = await redis.get(RedisKeys.stepUp(session.sessionId));
     if (!pending) {
-      throw new AppError(
-        ErrorCode.FORBIDDEN,
-        'No step-up pending for this session',
-        403,
-      );
+      throw new AppError(ErrorCode.FORBIDDEN, 'No step-up pending for this session', 403);
     }
 
-    // Step 3: Fetch challenge
     const challengePayload = await challengeService.fetch(challenge_id);
 
-    // Step 4: Fast nullifier pre-check
     const alreadySpent = await nullifierService.exists(nullifierHash);
     if (alreadySpent) {
       throw new AppError(ErrorCode.NULLIFIER_REPLAY, 'Proof replay detected', 400);
     }
 
-    // Step 5: ZKP verification (constant-time padded)
     const verifyResult = await zkpService.verify({
       proof,
-      publicSignals: public_signals,
+      publicSignals:  public_signals,
       challengeNonce: challengePayload.nonce,
     });
 
-    // Assert: the proof belongs to the SAME user as the current session
-    // This prevents a different user's valid proof from resolving someone else's step-up
     if (verifyResult.userId !== session.userId) {
       logger.error(
         { sessionUserId: session.userId, proofUserId: verifyResult.userId },
-        'Step-up resolve: proof user mismatch — possible session confusion attack',
+        'Step-up resolve: proof user mismatch',
       );
       throw new AppError(ErrorCode.INVALID_PROOF, 'Proof verification failed', 400);
     }
 
-    // Step 6: Consume challenge
     await challengeService.consume(challenge_id);
 
-    // Step 7: Register nullifier
     await nullifierService.register({
       nullifierHash:  verifyResult.nullifierHash,
       userId:         verifyResult.userId,
       challengeId:    challenge_id,
     });
 
-    // Step 8: Reset risk state in Redis
     await riskService.resolveStepUp(session.sessionId, session.userId);
 
-    // Step 9: Emit STEP_UP_RESOLVED over WebSocket to unlock client UI
-    const pushed = pushToSession(session.sessionId, {
-      type: 'SESSION_TERMINATED',  // reuse existing WS type — client handles gracefully
-    });
-    // Use a dedicated resolved event type:
     pushToSession(session.sessionId, {
       type:    'STEP_UP_RESOLVED',
       payload: { session_id: session.sessionId },
       ts:      Date.now(),
     });
 
-    logger.info(
-      { sessionId: session.sessionId, userId: session.userId, wsPushed: pushed },
-      'Step-up resolved successfully',
-    );
+    logger.info({ sessionId: session.sessionId, userId: session.userId }, 'Step-up resolved');
 
     res.status(200).json({ resolved: true });
   } catch (err) {
@@ -171,22 +149,24 @@ export async function getSessionMe(
     const session = res.locals['session'] as AuthenticatedSession;
 
     const dbSession = await prisma.session.findUnique({
-      where: { id: session.sessionId },
+      where:  { id: session.sessionId },
       select: {
-        id:               true,
-        riskLevel:        true,
-        createdAt:        true,
-        lastActiveAt:     true,
+        id:                true,
+        riskLevel:         true,
+        createdAt:         true,
+        lastActiveAt:      true,
         deviceFingerprint: true,
-        ipAddress:        true,
+        deviceLabel:       true,
+        ipAddress:         true,
       },
     });
 
     if (!dbSession) throw new NotFoundError('Session');
 
-    // Check if step-up is pending
     const stepUpRaw = await redis.get(RedisKeys.stepUp(session.sessionId));
-    const stepUp = stepUpRaw ? JSON.parse(stepUpRaw) as { requiredLevel: string; issuedAt: number } : null;
+    const stepUp    = stepUpRaw
+      ? (JSON.parse(stepUpRaw) as { requiredLevel: string; issuedAt: number })
+      : null;
 
     res.status(200).json({
       session_id:         session.sessionId,
@@ -197,32 +177,160 @@ export async function getSessionMe(
       created_at:         dbSession.createdAt.toISOString(),
       last_active_at:     dbSession.lastActiveAt.toISOString(),
       device_fingerprint: dbSession.deviceFingerprint,
+      device_label:       dbSession.deviceLabel,
     });
   } catch (err) {
     next(err);
   }
 }
 
-// ─── DELETE /session/:sessionId ───────────────────────────────────────────────
+// ─── GET /session/devices ─────────────────────────────────────────────────────
+
+export async function getDevices(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const session = res.locals['session'] as AuthenticatedSession;
+
+    // Fetch all non-expired, non-revoked sessions for this user
+    const sessions = await prisma.session.findMany({
+      where: {
+        userId:    session.userId,
+        isRevoked: false,
+        expiresAt: { gt: new Date() },  // exclude naturally expired sessions
+      },
+      select: {
+        id:                true,
+        deviceFingerprint: true,
+        deviceLabel:       true,
+        ipAddress:         true,
+        riskLevel:         true,
+        createdAt:         true,
+        lastActiveAt:      true,
+      },
+      orderBy: { lastActiveAt: 'desc' },
+    });
+
+    // Check which sessions have a pending step-up via Redis pipeline
+    const pipeline = redis.pipeline();
+    sessions.forEach((s) => pipeline.get(RedisKeys.stepUp(s.id)));
+    const stepUpResults = await pipeline.exec();
+
+    const formattedSessions = sessions.map((s, i) => {
+      const stepUpRaw = stepUpResults?.[i]?.[1];
+      const hasStepUp = typeof stepUpRaw === 'string' && stepUpRaw !== null;
+
+      return {
+        id:                s.id,
+        device_label:      s.deviceLabel,
+        device_fingerprint: s.deviceFingerprint,
+        ip_address:        s.ipAddress,
+        risk_level:        s.riskLevel,
+        created_at:        s.createdAt.toISOString(),
+        last_active_at:    s.lastActiveAt.toISOString(),
+        step_up_required:  hasStepUp,
+        // Mark the current session so the UI can show "This device"
+        is_current:        s.id === session.sessionId,
+      };
+    });
+
+    res.status(200).json({
+      sessions: formattedSessions,
+      total:    formattedSessions.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── POST /session/revoke/:sessionId ─────────────────────────────────────────
+
+export async function postRevokeSession(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const session   = res.locals['session'] as AuthenticatedSession;
+    const { sessionId } = req.params as { sessionId: string };
+
+    if (!sessionId) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'sessionId path parameter is required', 400);
+    }
+
+    // ── Ownership check ─────────────────────────────────────────────────────
+    // Fetch the target session and verify it belongs to the authenticated user.
+    // This prevents one user from revoking another user's session even if they
+    // know the session UUID.
+    const target = await prisma.session.findUnique({
+      where:  { id: sessionId },
+      select: { userId: true, isRevoked: true },
+    });
+
+    if (!target) {
+      throw new NotFoundError('Session');
+    }
+
+    if (target.userId !== session.userId) {
+      // Return the same NotFoundError (don't reveal session exists for other user)
+      throw new NotFoundError('Session');
+    }
+
+    if (target.isRevoked) {
+      // Idempotent — already revoked, return success
+      res.status(200).json({ message: 'Session already revoked', session_id: sessionId });
+      return;
+    }
+
+    // ── Two-phase revocation ────────────────────────────────────────────────
+
+    // Phase 1: Redis DEL — invalidates live session cache immediately.
+    // Any in-flight request using this session's access token will miss the cache
+    // and fall through to PG, where it will find is_revoked=true.
+    const redisDeleted = await redis.del(RedisKeys.session(sessionId));
+
+    // Also clear any step-up pending state
+    await redis.del(RedisKeys.stepUp(sessionId)).catch((err) =>
+      logger.warn({ err, sessionId }, 'Failed to clear step-up key during revocation'),
+    );
+
+    // Phase 2: PG UPDATE — durable revocation record.
+    await prisma.session.update({
+      where: { id: sessionId },
+      data:  { isRevoked: true },
+    });
+
+    // Close the WebSocket connection for this session if it's active
+    pushToSession(sessionId, {
+      type:    'SESSION_TERMINATED',
+      payload: {},
+      ts:      Date.now(),
+    });
+
+    logger.info(
+      { revokedSessionId: sessionId, byUserId: session.userId, redisDeleted },
+      'Session revoked via device management',
+    );
+
+    res.status(200).json({
+      message:    'Session revoked',
+      session_id: sessionId,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── DELETE /session/:sessionId (alias) ───────────────────────────────────────
 
 export async function deleteSession(
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  try {
-    const session    = res.locals['session'] as AuthenticatedSession;
-    const { sessionId } = req.params as { sessionId: string };
-
-    if (!sessionId) {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, 'sessionId required', 400);
-    }
-
-    await sessionService.revokeSession(sessionId, session.userId);
-    res.status(200).json({ message: 'Session revoked' });
-  } catch (err) {
-    next(err);
-  }
+  return postRevokeSession(req, res, next);
 }
 
 // ─── DELETE /session/all ──────────────────────────────────────────────────────

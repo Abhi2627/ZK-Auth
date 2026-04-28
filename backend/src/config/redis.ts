@@ -69,12 +69,15 @@ export async function disconnectRedis(): Promise<void> {
 // Centralised key construction — never build keys inline in service code.
 
 export const RedisKeys = {
-  challenge: (challengeId: string) => `challenge:${challengeId}`,
-  session: (sessionId: string) => `session:${sessionId}`,
-  nullifiers: () => 'nullifiers',
-  nullifierLock: (hash: string) => `lock:nullifier:${hash}`,
-  rateLimitChallenge: (ip: string) => `ratelimit:challenge:${ip}`,
-  rateLimitAuth: (ip: string) => `ratelimit:auth:${ip}`,
-  riskScore: (sessionId: string) => `risk:${sessionId}`,
-  stepUp: (sessionId: string) => `stepup:${sessionId}`,
+  challenge:          (challengeId: string) => `challenge:${challengeId}`,
+  session:            (sessionId: string)   => `session:${sessionId}`,
+  nullifiers:         ()                    => 'nullifiers',
+  nullifierLock:      (hash: string)        => `lock:nullifier:${hash}`,
+  rateLimitChallenge: (ip: string)          => `ratelimit:challenge:${ip}`,
+  rateLimitAuth:      (ip: string)          => `ratelimit:auth:${ip}`,
+  riskScore:          (sessionId: string)   => `risk:${sessionId}`,
+  stepUp:             (sessionId: string)   => `stepup:${sessionId}`,
+  proofRequest:       (requestId: string)   => `proofRequest:${requestId}`,
+  idempotency:        (key: string)         => `idem:${key}`,
+  idempotencyLock:    (key: string)         => `idem:lock:${key}`,
 } as const;

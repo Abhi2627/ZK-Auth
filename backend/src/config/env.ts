@@ -65,6 +65,22 @@ const envSchema = z.object({
   // Session / WebSocket
   WS_PING_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
   STEP_UP_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+
+  // Recovery (Argon2id parameters)
+  // Memory: 65536 KiB (64 MB) — defeats GPU attacks after DB exfiltration
+  // Iterations: 3 passes — OWASP minimum for Argon2id
+  // Parallelism: 1 — single-threaded verification matches server capacity
+  ARGON2_MEMORY_KIB:   z.coerce.number().int().positive().default(65536),
+  ARGON2_ITERATIONS:   z.coerce.number().int().positive().default(3),
+  ARGON2_PARALLELISM:  z.coerce.number().int().positive().default(1),
+
+  // Circuit breaker — ML service
+  // If gRPC call exceeds this many ms, fail open (skip ML, allow ZKP-only auth)
+  GRPC_TIMEOUT_MS:            z.coerce.number().int().positive().default(5_000),
+  // Consecutive failures before opening the circuit
+  GRPC_CIRCUIT_OPEN_THRESHOLD: z.coerce.number().int().positive().default(5),
+  // How long (ms) to wait before attempting a probe after circuit opens
+  GRPC_CIRCUIT_RESET_MS:       z.coerce.number().int().positive().default(30_000),
 });
 
 const parsed = envSchema.safeParse(process.env);

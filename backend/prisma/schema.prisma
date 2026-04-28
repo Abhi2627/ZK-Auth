@@ -43,6 +43,7 @@ model User {
   nullifiers      Nullifier[]
   credentials     Credential[]
   stepUpEvents    StepUpEvent[] @relation("StepUpUser")
+  recoveryCodes   RecoveryCode[]
 
   @@index([commitmentHash])
   @@map("users")
@@ -71,6 +72,8 @@ model Session {
   createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz
   lastActiveAt        DateTime    @default(now()) @map("last_active_at") @db.Timestamptz
 
+  deviceLabel        String?     @map("device_label")         // human-readable: "iPhone 15", "Chrome/macOS"
+  userAgent          String?     @map("user_agent")           // raw UA string (truncated to 512 chars)
   // Relations
   user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   stepUpEvents        StepUpEvent[]
@@ -164,6 +167,37 @@ enum StepUpResolution {
   FAILED
   TIMED_OUT
 
+  @@schema("auth")
+}
+
+// ─── Recovery Codes ───────────────────────────────────────────────────────────
+// Stores an Argon2id hash of a 24-word BIP-39 mnemonic generated at
+// registration. The raw mnemonic is returned to the user ONCE and never stored.
+//
+// Security invariants:
+//   - codeHash: argon2id(mnemonic, salt) — Argon2id chosen over bcrypt because
+//     its memory-hardness parameter (64 MB default) defeats GPU/ASIC attacks
+//     on the hash even after a full DB exfiltration.
+//   - argon2Salt: 16-byte random per-user salt (separate from the mnemonic).
+//   - isUsed: set to true atomically when recovery is executed; prevents reuse.
+//   - Only ONE active (isUsed=false) recovery code per user at any time.
+//     Generating a new code immediately marks the old one as superseded.
+//   - NEVER logs, transmits, or caches the raw mnemonic after returning it.
+model RecoveryCode {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  codeHash        String    @map("code_hash")   // argon2id(mnemonic_phrase, argon2Salt)
+  argon2Salt      Bytes     @map("argon2_salt")  // 16-byte random salt for Argon2id
+  isUsed          Boolean   @default(false) @map("is_used")
+  usedAt          DateTime? @map("used_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  supersededAt    DateTime? @map("superseded_at") @db.Timestamptz // set when a new code is generated
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("recovery_codes")
   @@schema("auth")
 }
 

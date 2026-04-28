@@ -91,6 +91,8 @@ export class SessionService {
     userId: string,
     deviceFingerprint?: string,
     ipAddress?: string,
+    deviceLabel?: string,
+    userAgent?: string,
   ): Promise<AuthTokens> {
     const sessionId = generateId();
     const refreshJti = generateId();    // unique ID for this refresh token
@@ -132,15 +134,17 @@ export class SessionService {
     try {
       await prisma.session.create({
         data: {
-          id: sessionId,
+          id:                sessionId,
           userId,
           refreshTokenHash,
           deviceFingerprint: deviceFingerprint ?? null,
-          ipAddress: ipAddress ?? null,
-          riskLevel: 'LOW',
-          isRevoked: false,
+          ipAddress:         ipAddress ?? null,
+          deviceLabel:       deviceLabel ?? null,
+          userAgent:         userAgent   ?? null,
+          riskLevel:         'LOW',
+          isRevoked:         false,
           expiresAt,
-          lastActiveAt: new Date(),
+          lastActiveAt:      new Date(),
         },
       });
     } catch (err) {
@@ -203,6 +207,8 @@ export class SessionService {
     rawRefreshToken: string,
     deviceFingerprint?: string,
     ipAddress?: string,
+    deviceLabel?: string,
+    userAgent?: string,
   ): Promise<AuthTokens> {
     // ── 1. Verify refresh token signature and expiry ──────────────────────────
     let decoded: JwtRefreshPayload;
@@ -275,7 +281,7 @@ export class SessionService {
     );
 
     // ── 6. Issue a fresh session ──────────────────────────────────────────────
-    return this.issue(session.userId, deviceFingerprint, ipAddress);
+    return this.issue(session.userId, deviceFingerprint, ipAddress, deviceLabel, userAgent);
   }
 
   // ─── Revoke: single session ───────────────────────────────────────────────

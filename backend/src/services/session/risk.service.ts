@@ -37,6 +37,7 @@
 
 import { redis, RedisKeys } from '../../config/redis.js';
 import { telemetryService } from '../telemetry/telemetry.service.js';
+import { grpcCircuitBreaker, CircuitOpenError } from '../../grpc/circuitBreaker.js';
 import { logger } from '../../utils/logger.js';
 import { env } from '../../config/env.js';
 import type { RiskLevel, WsMessage, StepUpEvent } from '@zk-auth/types';
@@ -75,8 +76,23 @@ export class RiskService {
   async processScore(score: IncomingRiskScore, ws: WebSocket): Promise<void> {
     const { sessionId, userId, score: rawScore, riskLevel, riskReason, modelVersion, eventsInWindow } = score;
 
+    // ── Circuit breaker guard ─────────────────────────────────────────────────
+    // If the circuit is OPEN, the gRPC stream should not be producing scores.
+    // If a score somehow arrives (e.g. last in-flight response before circuit
+    // opened), we still process it but suppress step-up triggers — triggering
+    // a step-up with a potentially stale or erroneous score during a service
+    // degradation would lock out users unnecessarily.
+    const circuitOpen = grpcCircuitBreaker.state !== 'CLOSED';
+    if (circuitOpen) {
+      logger.warn(
+        { sessionId, circuitState: grpcCircuitBreaker.state },
+        'Risk score received while circuit is not CLOSED — updating Redis only, suppressing step-up triggers',
+      );
+    }
+
     // ── 1. Classify into step-up tier ─────────────────────────────────────────
-    const stepUpLevel = this._classifyStepUp(rawScore);
+    // Only classify if circuit is CLOSED — suppress step-ups during degradation
+    const stepUpLevel = circuitOpen ? null : this._classifyStepUp(rawScore);
 
     // ── 2. Atomic Redis session update ────────────────────────────────────────
     await this._updateSessionCache(sessionId, userId, riskLevel as RiskLevel, stepUpLevel);
