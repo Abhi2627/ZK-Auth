@@ -7,6 +7,7 @@
 
 import 'package:dio/dio.dart';
 import '../storage/secure_storage.dart';
+import '../config/app_config.dart';
 
 // ─── Exception ────────────────────────────────────────────────────────────────
 
@@ -38,10 +39,7 @@ class ZkAuthHttpClient {
       : _storage = secureStorage,
         _dio = Dio(
           BaseOptions(
-            baseUrl: const String.fromEnvironment(
-              'API_BASE_URL',
-              defaultValue: 'http://localhost:3001/api/v1',
-            ),
+            baseUrl: AppConfig.apiBaseUrl,
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 30),
             headers: {'Content-Type': 'application/json'},

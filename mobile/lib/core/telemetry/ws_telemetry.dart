@@ -12,6 +12,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../config/app_config.dart';
 import 'event_collector.dart';
 
 // ─── Message types ────────────────────────────────────────────────────────────
@@ -48,10 +49,7 @@ class WsIncomingMessage {
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 class WsTelemetryService {
-  static const String _wsBase = String.fromEnvironment(
-    'WS_BASE_URL',
-    defaultValue: 'ws://localhost:3001/api/v1/session/telemetry',
-  );
+  static String get _wsBase => AppConfig.wsBaseUrl;
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _sub;
