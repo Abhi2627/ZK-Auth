@@ -5,7 +5,7 @@
 
 # ─── Base: common Node.js + system deps ──────────────────────────────────────
 FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl python3 make g++
 WORKDIR /app
 
 # ─── Development: hot-reload with tsx ────────────────────────────────────────
@@ -15,8 +15,8 @@ ENV NODE_ENV=development
 # Copy package manifests for layer caching
 COPY package.json package-lock.json* ./
 COPY backend/package.json ./backend/
-COPY packages/types/package.json ./packages/types/
-COPY packages/proto/package.json ./packages/proto/
+COPY packages/types/ ./packages/types/
+COPY packages/proto/ ./packages/proto/
 
 RUN npm ci --workspace=backend --workspace=@zk-auth/types --include-workspace-root
 
@@ -38,8 +38,8 @@ ENV NODE_ENV=production
 
 COPY package.json package-lock.json* ./
 COPY backend/package.json ./backend/
-COPY packages/types/package.json ./packages/types/
-COPY packages/proto/package.json ./packages/proto/
+COPY packages/types/ ./packages/types/
+COPY packages/proto/ ./packages/proto/
 
 RUN npm ci --workspace=backend --workspace=@zk-auth/types --include-workspace-root
 
@@ -60,7 +60,7 @@ RUN addgroup --system --gid 1001 nodeuser && \
 
 COPY package.json package-lock.json* ./
 COPY backend/package.json ./backend/
-COPY packages/types/package.json ./packages/types/
+COPY packages/types/ ./packages/types/
 
 # Install production dependencies only
 RUN npm ci --workspace=backend --omit=dev --include-workspace-root && \

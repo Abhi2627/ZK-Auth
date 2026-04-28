@@ -24,7 +24,7 @@ FROM base AS deps
 # Copy monorepo root manifest + workspace package manifests
 COPY package.json package-lock.json* ./
 COPY web/package.json         ./web/
-COPY packages/types/package.json ./packages/types/
+COPY packages/types/          ./packages/types/
 
 # Install all workspace dependencies for web + @zk-auth/types
 RUN npm ci --workspace=web --workspace=@zk-auth/types --include-workspace-root

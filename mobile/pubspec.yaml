@@ -59,7 +59,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/circuits/
-    # Circuit artifacts placed here after compilation:
-    #   assets/circuits/auth.wasm  — compiled circuit WASM
-    #   assets/circuits/auth.zkey  — proving key
-    # These are large files; use flutter_gen or download at first launch in prod.
+    - assets/images/

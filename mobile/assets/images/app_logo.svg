@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Background rounded rect -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1f6feb"/>
+      <stop offset="100%" style="stop-color:#388bfd"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App icon background -->
+  <rect width="200" height="200" rx="44" ry="44" fill="url(#bg)"/>
+  <!-- Shine overlay -->
+  <rect width="200" height="100" rx="44" ry="44" fill="url(#shine)"/>
+
+  <!-- ZK text -->
+  <text x="100" y="118"
+    font-family="system-ui, -apple-system, 'SF Pro Display', sans-serif"
+    font-weight="900"
+    font-size="76"
+    fill="white"
+    text-anchor="middle"
+    letter-spacing="-2">ZK</text>
+
+  <!-- Subtle lock arc at bottom -->
+  <path d="M 68 148 A 32 32 0 0 1 132 148" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <rect x="72" y="148" width="56" height="32" rx="8" fill="white" opacity="0.15"/>
+</svg>
