@@ -1,47 +1,50 @@
-version: '3.9'
+# ZK-Auth — Local Development Docker Compose
+# Run: docker-compose up -d
+# Note: 'version' key removed (obsolete in Compose v2+)
 
 services:
-  # ─── PostgreSQL (auth + zkp schemas) ──────────────────────────────────────
+
+  # ─── PostgreSQL (auth + zkp schemas) ────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: zkauth-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: zkauth_root
+      POSTGRES_USER:     zkauth_root
       POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD:-changeme_dev}
-      POSTGRES_DB: zkauth_db
+      POSTGRES_DB:       zkauth_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/prisma/migrations:/docker-entrypoint-initdb.d/prisma:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zkauth_root -d zkauth_db"]
+      test:     ["CMD-SHELL", "pg_isready -U zkauth_root -d zkauth_db"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout:  5s
+      retries:  5
 
-  # ─── TimescaleDB (telemetry schema) ────────────────────────────────────────
+  # ─── TimescaleDB (telemetry schema) ─────────────────────────────────────────
   timescaledb:
     image: timescale/timescaledb:latest-pg16
     container_name: zkauth-timescale
     restart: unless-stopped
     environment:
-      POSTGRES_USER: zkauth_root
+      POSTGRES_USER:     zkauth_root
       POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD:-changeme_dev}
-      POSTGRES_DB: zkauth_telemetry
+      POSTGRES_DB:       zkauth_telemetry
     ports:
       - "5433:5432"
     volumes:
       - timescale_data:/var/lib/postgresql/data
       - ./backend/prisma/migrations/init_timescale.sql:/docker-entrypoint-initdb.d/init_timescale.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zkauth_root -d zkauth_telemetry"]
+      test:     ["CMD-SHELL", "pg_isready -U zkauth_root -d zkauth_telemetry"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout:  5s
+      retries:  5
 
-  # ─── Redis 7 ───────────────────────────────────────────────────────────────
+  # ─── Redis 7 ─────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: zkauth-redis
@@ -57,25 +60,50 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme_dev}", "ping"]
+      test:     ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme_dev}", "ping"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout:  5s
+      retries:  5
 
-  # ─── API Gateway (Node.js/TypeScript) ─────────────────────────────────────
+  # ─── ML gRPC Inference Service (Python) ─────────────────────────────────────
+  # Build context is repo ROOT so the Dockerfile can COPY packages/proto/
+  ml-service:
+    build:
+      context:    .
+      dockerfile: ml-service/Dockerfile
+    container_name: zkauth-ml
+    restart: unless-stopped
+    env_file: ./ml-service/.env
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./ml-service/models:/app/models
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL",
+        "python -c \"import grpc; ch=grpc.insecure_channel('localhost:50051'); grpc.channel_ready_future(ch).result(timeout=5); exit(0)\""]
+      interval: 15s
+      timeout:  10s
+      retries:  5
+      start_period: 20s
+
+  # ─── API Gateway (Node.js/TypeScript) ────────────────────────────────────────
+  # Build context is repo ROOT — backend/Dockerfile already expects this
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: development
+      context:    .
+      dockerfile: backend/Dockerfile
+      target:     development
     container_name: zkauth-backend
     restart: unless-stopped
     env_file: ./backend/.env
     ports:
       - "3001:3001"
     volumes:
-      - ./backend/src:/app/src:ro
-      - ./backend/circuits:/app/circuits:ro
+      - ./backend/src:/app/backend/src:ro
+      - ./backend/circuits:/app/backend/circuits:ro
       - ./packages:/app/packages:ro
     depends_on:
       postgres:
@@ -87,40 +115,28 @@ services:
       ml-service:
         condition: service_healthy
 
-  # ─── ML gRPC Inference Service (Python) ────────────────────────────────────
-  ml-service:
-    build:
-      context: ./ml-service
-      dockerfile: Dockerfile
-    container_name: zkauth-ml
-    restart: unless-stopped
-    env_file: ./ml-service/.env
-    ports:
-      - "50051:50051"
-    volumes:
-      - ./ml-service/models:/app/models:ro
-    depends_on:
-      timescaledb:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import grpc; channel = grpc.insecure_channel('localhost:50051'); grpc.channel_ready_future(channel).result(timeout=5)"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
-  # ─── Next.js Web Client ─────────────────────────────────────────────────────
+  # ─── Next.js Web Client ──────────────────────────────────────────────────────
+  # Build context is repo ROOT so web/Dockerfile can COPY packages/types/
   web:
     build:
-      context: ./web
-      dockerfile: Dockerfile
-      target: development
+      context:    .
+      dockerfile: web/Dockerfile
+      target:     development
+      args:
+        # Point API/WS calls to the backend container name (Docker internal network)
+        NEXT_PUBLIC_API_URL: http://backend:3001
+        NEXT_PUBLIC_WS_URL:  ws://backend:3001
     container_name: zkauth-web
     restart: unless-stopped
-    env_file: ./web/.env.local
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3001
+      NEXT_PUBLIC_WS_URL:  ws://backend:3001
+      NODE_ENV:            development
     ports:
       - "3000:3000"
     volumes:
-      - ./web/src:/app/src:ro
+      - ./web/src:/app/web/src:ro
+      - ./packages:/app/packages:ro
     depends_on:
       - backend
 
