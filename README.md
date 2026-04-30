@@ -899,20 +899,6 @@ defaultConfig {
 
 ---
 
-## Research Citation
-
-```bibtex
-@inproceedings{dandge2025zkpcloud,
-  title     = {Zero-Knowledge Proof for Authentication in Cloud Computing},
-  author    = {Dandge, Abhay and others},
-  booktitle = {Proceedings of FrontSci 2025},
-  publisher = {Springer Nature},
-  year      = {2025}
-}
-```
-
----
-
 ## License
 
 MIT — See [LICENSE](./LICENSE) file.
