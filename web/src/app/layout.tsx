@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { WsProvider }        from '../contexts/WsContext';
 import { TelemetryProvider } from '../lib/telemetry';
 import { StepUpModal }       from '../components/AuthFlow/StepUpModal';
+import './globals.css';
 
 export const metadata: Metadata = {
   title:       'ZK-Auth',

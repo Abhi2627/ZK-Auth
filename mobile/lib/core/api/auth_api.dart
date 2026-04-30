@@ -52,6 +52,22 @@ class AuthApi {
 
   const AuthApi({required ZkAuthHttpClient client}) : _client = client;
 
+  Future<Map<String, dynamic>> register({
+    required String commitmentHash,
+    required String publicKeyHex,
+    String? deviceLabel,
+  }) async {
+    final response = await _client.dio.post<Map<String, dynamic>>(
+      '/auth/register',
+      data: {
+        'commitment_hash': commitmentHash,
+        'public_key_hex':  publicKeyHex.padLeft(64, '0').substring(0, 64),
+        if (deviceLabel != null) 'device_label': deviceLabel,
+      },
+    );
+    return response.data ?? {};
+  }
+
   Future<ChallengeResponse> fetchChallenge({String? commitmentHash}) async {
     final response = await _client.dio.post<Map<String, dynamic>>(
       '/auth/challenge',

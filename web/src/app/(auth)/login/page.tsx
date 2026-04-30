@@ -1,16 +1,22 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { LoginForm } from '../../../components/AuthFlow/LoginForm';
-import { useRouter }  from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
 
   return (
-    <main style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+    <main style={{
+      display:         'flex',
+      minHeight:       '100vh',
+      alignItems:      'center',
+      justifyContent:  'center',
+      background:      '#010409',
+      padding:         '24px',
+    }}>
       <LoginForm
-        onSuccess={(sessionId) => {
-          // Phase 7: start telemetry collector here with sessionId
+        onSuccess={() => {
           router.push('/dashboard');
         }}
       />
