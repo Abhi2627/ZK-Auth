@@ -1,5 +1,5 @@
 name: zk_auth
-description: "ZK-Auth Flutter mobile client — passwordless ZKP authentication"
+description: "ZK-Auth — Zero-Knowledge DigiLocker for MANIT"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -11,51 +11,53 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # ─── State management ────────────────────────────────────────────────────────
+  # State management
   flutter_bloc: ^8.1.5
   equatable: ^2.0.5
   bloc: ^8.1.4
 
-  # ─── HTTP client ─────────────────────────────────────────────────────────────
+  # HTTP + networking
   dio: ^5.4.3+1
-  # Interceptors: auth token injection, retry on 401
 
-  # ─── Secure storage (JWT tokens + ZKP secret) ─────────────────────────────
+  # Secure storage
   flutter_secure_storage: ^9.0.0
-  # iOS: Keychain, Android: EncryptedSharedPreferences
 
-  # ─── WebSocket ────────────────────────────────────────────────────────────────
+  # WebSocket
   web_socket_channel: ^3.0.0
 
-  # ─── ZKP prover bridge ───────────────────────────────────────────────────────
-  # flutter_js: runs snarkjs WASM inside a JavaScriptCore/V8 context.
-  # The prover runs in a Dart isolate so the UI thread is never blocked.
-  flutter_js: ^0.8.0
-
-  # ─── Mobile telemetry ────────────────────────────────────────────────────────
-  sensors_plus: ^5.0.1
-  # Gyroscope + accelerometer streams at ~50Hz
-
-  # ─── Navigation ──────────────────────────────────────────────────────────────
+  # Navigation
   go_router: ^14.1.4
 
-  # ─── Utilities ───────────────────────────────────────────────────────────────
-  uuid: ^4.4.0
-  crypto: ^3.0.3           # SHA-256 for page_context hashing
-  convert: ^3.1.1          # hex encoding/decoding
+  # QR code generation (display QR on screen)
+  qr_flutter: ^4.1.0
 
-  # ─── UI ──────────────────────────────────────────────────────────────────────
+  # QR code scanning (camera-based scanner)
+  mobile_scanner: ^5.2.3
+
+  # PDF generation
+  pdf: ^3.10.8
+  printing: ^5.12.0
+
+  # Utilities
+  uuid: ^4.4.0
+  crypto: ^3.0.3
+  convert: ^3.1.1
+  intl: ^0.19.0
+  path_provider: ^2.1.3
+  share_plus: ^9.0.0
+  open_filex: ^4.4.1
+
+  # UI
   flutter_svg: ^2.0.10+1
   gap: ^3.0.1
   sqflite: ^2.4.2+1
   path: ^1.9.1
+  cached_network_image: ^3.3.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-  bloc_test: ^9.1.7
-  mocktail: ^1.0.4
 
 flutter:
   uses-material-design: true

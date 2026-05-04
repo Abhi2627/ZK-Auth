@@ -11,11 +11,12 @@ import { env }     from './config/env.js';
 import { logger }  from './utils/logger.js';
 import { AppError, ErrorCode } from './utils/errors.js';
 
-import { authRouter }       from './routes/auth.routes.js';
-import { credentialRouter } from './routes/credential.routes.js';
-import { sessionRouter }    from './routes/session.routes.js';
-import { issuerRouter }     from './routes/issuer.routes.js';
-import { verifierRouter }   from './routes/verifier.routes.js';
+import { authRouter }          from './routes/auth.routes.js';
+import { credentialRouter }    from './routes/credential.routes.js';
+import { sessionRouter }       from './routes/session.routes.js';
+import { issuerRouter }        from './routes/issuer.routes.js';
+import { verifierRouter }      from './routes/verifier.routes.js';
+import { verifyRequestRouter, issuanceRouter } from './routes/verifyRequest.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -28,11 +29,16 @@ export function createApp(): Express {
   const allowedOrigins = env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim());
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new AppError(ErrorCode.FORBIDDEN, 'CORS: origin not allowed', 403));
+      // Allow requests with no origin (curl, mobile apps, Postman)
+      if (!origin) return callback(null, true);
+      // In development, allow all localhost origins regardless of port
+      if (process.env['NODE_ENV'] !== 'production' && origin.startsWith('http://localhost')) {
+        return callback(null, true);
       }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new AppError(ErrorCode.FORBIDDEN, 'CORS: origin not allowed', 403));
     },
     credentials:    true,
     methods:        ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -72,9 +78,13 @@ export function createApp(): Express {
   app.use('/api/v1/credential', credentialRouter);
   app.use('/api/v1/session',    sessionRouter);
 
-  // Phase 9: Three-Actor Ecosystem (separate prefix — actor separation)
+  // Phase 9: Three-Actor Ecosystem
   app.use('/api/issuer',   issuerRouter);
   app.use('/api/verifier', verifierRouter);
+
+  // Phase 11: Remote verification requests + issuance history
+  app.use('/api/v1/verify-request', verifyRequestRouter);
+  app.use('/api/v1/issuance',       issuanceRouter);
 
   // 404
   app.use((req: Request, res: Response) => {

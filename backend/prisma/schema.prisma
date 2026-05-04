@@ -322,3 +322,57 @@ model DisclosureProof {
   @@map("disclosure_proofs")
   @@schema("zkp")
 }
+
+// ─── Credential Issuance History ───────────────────────────────────────────────────────────
+model IssuanceRecord {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  credentialId    String    @map("credential_id")  // reference (no FK — survives credential deletion)
+  userId          String    @map("user_id") @db.Uuid
+  credentialType  String    @map("credential_type")
+  issuerDid       String    @map("issuer_did")
+  holderDid       String    @map("holder_did")
+  issuedAt        DateTime  @default(now()) @map("issued_at") @db.Timestamptz
+  expiresAt       DateTime? @map("expires_at") @db.Timestamptz
+  merkleRoot      String    @map("merkle_root")
+  attributeSchema Json      @map("attribute_schema")  // attribute names only — no values
+  ipAddress       String?   @map("ip_address")
+
+  @@index([userId])
+  @@index([issuedAt])
+  @@map("issuance_records")
+  @@schema("zkp")
+}
+
+// ─── Verification Requests (remote proof requests — no QR needed) ────────────────────
+// A third party (bank, employer) sends a proof request directly to the user.
+// User reviews each claim in their wallet, approves or rejects individually.
+model VerificationRequest {
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String                @map("user_id") @db.Uuid
+  verifierDid     String                @map("verifier_did")
+  verifierName    String                @map("verifier_name")
+  purpose         String
+  requestedClaims Json                  @map("requested_claims")
+  challenge       String
+  status          VerificationReqStatus @default(PENDING)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt       DateTime              @map("expires_at") @db.Timestamptz
+  respondedAt     DateTime?             @map("responded_at") @db.Timestamptz
+  approvedClaims  Json?                 @map("approved_claims")
+  rejectedClaims  Json?                 @map("rejected_claims")
+  rejectionReason String?               @map("rejection_reason")
+
+  @@index([userId])
+  @@index([status])
+  @@map("verification_requests")
+  @@schema("zkp")
+}
+
+enum VerificationReqStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+
+  @@schema("zkp")
+}

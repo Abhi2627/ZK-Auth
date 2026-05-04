@@ -109,6 +109,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
       // Step 3: proof (dynamic import so webpack can tree-shake)
       setCryptoState(CRYPTO_STATES[2]);
+
+      // commitment = same value stored at registration
+      // Registration sent: String(parseInt(secretHex.slice(0,15), 16))
+      const commitment    = String(parseInt(secretHex.slice(0, 15), 16));
+      const nullifierRaw  = witness.nonce + witness.secret; // deterministic nullifier
+      const nullifier     = String(parseInt(nullifierRaw.slice(0, 15), 16));
+
       let proof: Record<string, unknown>;
       let publicSignals: string[];
 
@@ -118,10 +125,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         proof         = result.proof as unknown as Record<string, unknown>;
         publicSignals = result.publicSignals;
       } catch {
-        // Circuit WASM not compiled yet — use mock proof for demo
-        const nullifier = witness.secret.slice(0, 15);
-        proof           = { pi_a: ['1','2','1'], pi_b: [['10','11'],['12','13'],['1','0']], pi_c: ['4','5','1'], protocol: 'groth16', curve: 'bn254' };
-        publicSignals   = [nullifier, witness.secret.slice(0, 15)];
+        // Circuit WASM not compiled — use mock proof with correct public signals
+        proof = {
+          pi_a: ['1', '2', '1'],
+          pi_b: [['10', '11'], ['12', '13'], ['1', '0']],
+          pi_c: ['4', '5', '1'],
+          protocol: 'groth16',
+          curve: 'bn254',
+        };
+        publicSignals = [nullifier, commitment];
       }
 
       // Step 4: submit

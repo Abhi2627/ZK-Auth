@@ -24,7 +24,7 @@ class LoginScreen extends StatelessWidget {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          context.go('/dashboard');
+          context.go('/home');
         }
         if (state is AuthLoggedOut) {
           // Already on login screen, just reset

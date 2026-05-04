@@ -15,11 +15,12 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence }       from 'framer-motion';
-import { intentQueue }                   from '../../lib/intentQueue';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type Tab = 'issue' | 'history' | 'behavioral';
 
 type PipelineStep =
   | 'idle'
@@ -46,6 +47,17 @@ interface IssuanceResult {
   leaf_hashes:           Record<string, string>;
   issued_at:             string;
   expires_at:            string;
+}
+
+interface HistoryRecord {
+  id:              string;
+  credential_id:   string;
+  credential_type: string;
+  holder_did:      string;
+  issued_at:       string;
+  expires_at:      string | null;
+  merkle_root:     string;
+  attributes:      string[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -163,6 +175,24 @@ export default function IssuerDemoPage() {
   const [result, setResult]     = useState<IssuanceResult | null>(null);
   const [error, setError]       = useState<string | null>(null);
   const [vcJson, setVcJson]     = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('issue');
+  const [history, setHistory]   = useState<HistoryRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const r = await fetch(`${API_BASE}/api/issuer/history`);
+      const d = await r.json() as { records: HistoryRecord[] };
+      setHistory(d.records ?? []);
+    } catch { /* ignore */ } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'history') fetchHistory();
+  }, [activeTab, fetchHistory]);
 
   const handleChange = (field: string) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -205,27 +235,17 @@ export default function IssuerDemoPage() {
       await sleep(800);
       setStep('building_tree');
 
-      // ── Step 4: Call API (idempotency-safe) ───────────────────────────────
+      // ── Step 4: Call API ───────────────────────────────────────────────────
       await sleep(400);
       setStep('wrapping_vc');
 
-      const idempotencyKey = await intentQueue.enqueue('ISSUE_CREDENTIAL', {
-        full_name: form.full_name,
-        date_of_birth: form.date_of_birth,
-      });
-
-      const mockUserId = '00000000-0000-0000-0000-000000000001';
-      const mockDid    = `did:key:z${btoa(form.enrollment_no).slice(0, 32)}`;
+      const mockDid = `did:key:z${btoa(form.enrollment_no).slice(0, 32)}`;
 
       const resp = await fetch(`${API_BASE}/api/issuer/issue-id`, {
         method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Idempotency-Key': idempotencyKey,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           holder_did:     mockDid,
-          user_id:        mockUserId,
           full_name:      form.full_name,
           date_of_birth:  form.date_of_birth,
           id_number:      form.enrollment_no,
@@ -240,7 +260,6 @@ export default function IssuerDemoPage() {
       }
 
       const data = (await resp.json()) as IssuanceResult;
-      await intentQueue.complete(idempotencyKey, data);
 
       // ── Update attribute rows with real hashes ────────────────────────────
       const leafHashMap = data.leaf_hashes ?? {};
@@ -282,6 +301,115 @@ export default function IssuerDemoPage() {
       </header>
 
       <main style={s.main}>
+        {/* ── Tab navigation ── */}
+        <div style={s.tabBar}>
+          {([['issue','🔐 Issue Credential'],['history','📋 Issuance History'],['behavioral','🧠 Behavioral Auth']] as const).map(([tab, label]) => (
+            <button key={tab} style={{ ...s.tabBtn, ...(activeTab === tab ? s.tabBtnActive : {}) }}
+              onClick={() => setActiveTab(tab)}>{label}</button>
+          ))}
+        </div>
+
+        {activeTab === 'behavioral' && (
+          <div style={s.behavioralPanel}>
+            <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>🧠 LSTM Behavioral Biometrics</h2>
+            <p style={{ margin: '0 0 20px', color: '#8b949e', fontSize: 14, lineHeight: 1.6 }}>
+              ZK-Auth adds a continuous identity verification layer <em>after</em> the initial ZKP login.
+              No PIN, no fingerprint, no face scan — the system learns your unique interaction patterns.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
+              {[{icon:'⌨️',title:'Keystroke Dynamics',desc:'Dwell time between keypresses, inter-key intervals. Your typing rhythm is unique as a fingerprint.'},
+                {icon:'🖱️',title:'Mouse Biometrics',desc:'Velocity, acceleration, curvature of cursor paths. Even hovering patterns reveal identity.'},
+                {icon:'📱',title:'Touch Pressure',desc:'Force applied on mobile touchscreen, swipe velocity, grip angle. Captured at 50Hz.'}]
+                .map((item) => (
+                  <div key={item.title} style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: 10, padding: 16 }}>
+                    <div style={{ fontSize: 28, marginBottom: 10 }}>{item.icon}</div>
+                    <p style={{ margin: '0 0 6px', fontWeight: 700, color: '#e6edf3' }}>{item.title}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#8b949e', lineHeight: 1.5 }}>{item.desc}</p>
+                  </div>
+                ))}
+            </div>
+            <div style={{ background: '#0d1117', border: '1px solid #1f6feb44', borderRadius: 12, padding: 20 }}>
+              <p style={{ margin: '0 0 12px', fontWeight: 700, color: '#79c0ff', fontSize: 14 }}>📊 LSTM Risk Scoring Pipeline</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {['Raw Events (50Hz)','→','Feature Vector','→','LSTM Model','→','Risk Score [0,1]','→','Action'].map((step, i) => (
+                  <span key={i} style={{ background: step === '→' ? 'none' : '#161b22', border: step === '→' ? 'none' : '1px solid #30363d',
+                    padding: step === '→' ? '0 4px' : '4px 10px', borderRadius: 6, fontSize: 12,
+                    color: step === '→' ? '#484f58' : '#c9d1d9' }}>{step}</span>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 16 }}>
+                {[{range:'0.0 – 0.45',label:'LOW RISK',action:'No action — session continues normally',color:'#4ade80',bg:'#052e16'},
+                  {range:'0.45 – 0.75',label:'MEDIUM RISK',action:'SOFT step-up: re-authenticate with ZKP proof',color:'#fbbf24',bg:'#1c1408'},
+                  {range:'0.75 – 1.0',label:'HIGH RISK',action:'HARD step-up: session locked until re-auth',color:'#f87171',bg:'#450a0a'}]
+                  .map((tier) => (
+                    <div key={tier.label} style={{ background: tier.bg, border: `1px solid ${tier.color}44`, borderRadius: 8, padding: 12 }}>
+                      <p style={{ margin: '0 0 4px', fontSize: 10, fontFamily: 'monospace', color: tier.color }}>{tier.range}</p>
+                      <p style={{ margin: '0 0 6px', fontWeight: 700, color: tier.color, fontSize: 13 }}>{tier.label}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: '#8b949e', lineHeight: 1.4 }}>{tier.action}</p>
+                    </div>
+                  ))}
+              </div>
+              <p style={{ margin: '16px 0 0', fontSize: 12, color: '#484f58' }}>
+                ⚡ ML service: gRPC on localhost:50051 · LSTM trained on 50Hz behavioral events · Real-time inference &lt;5ms
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Credential Issuance History</h2>
+              <button style={{ ...s.retryBtn, fontSize: 12 }} onClick={fetchHistory} disabled={historyLoading}>
+                {historyLoading ? 'Loading…' : '↻ Refresh'}
+              </button>
+            </div>
+            {historyLoading ? (
+              <div style={{ textAlign: 'center', padding: 40, color: '#8b949e' }}>Loading records…</div>
+            ) : history.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 60, color: '#484f58' }}>
+                <p style={{ fontSize: 40, margin: '0 0 12px' }}>📋</p>
+                <p style={{ margin: 0, fontSize: 16, color: '#8b949e' }}>No credentials issued yet</p>
+                <p style={{ margin: '6px 0 0', fontSize: 13 }}>Issue a credential to see it here</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {history.map((rec) => (
+                  <div key={rec.id} style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: 10, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 24 }}>🎓</span>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: 700, color: '#e6edf3', fontSize: 14 }}>{rec.credential_type}</p>
+                          <p style={{ margin: 0, fontSize: 11, color: '#8b949e', fontFamily: 'monospace' }}>{rec.credential_id.substring(0, 8)}…</p>
+                        </div>
+                      </div>
+                      <span style={{ background: '#052e16', color: '#4ade80', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700 }}>ISSUED</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                      <div><p style={{ margin: '0 0 2px', fontSize: 10, color: '#484f58' }}>ISSUED AT</p><p style={{ margin: 0, fontSize: 12, color: '#c9d1d9' }}>{new Date(rec.issued_at).toLocaleString()}</p></div>
+                      <div><p style={{ margin: '0 0 2px', fontSize: 10, color: '#484f58' }}>EXPIRES</p><p style={{ margin: 0, fontSize: 12, color: '#c9d1d9' }}>{rec.expires_at ? new Date(rec.expires_at).toLocaleDateString() : '—'}</p></div>
+                      <div><p style={{ margin: '0 0 2px', fontSize: 10, color: '#484f58' }}>MERKLE ROOT</p><p style={{ margin: 0, fontSize: 11, color: '#4ade80', fontFamily: 'monospace' }}>{rec.merkle_root}</p></div>
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <p style={{ margin: '0 0 4px', fontSize: 10, color: '#484f58' }}>ATTRIBUTES COMMITTED (raw values NOT stored)</p>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {(Array.isArray(rec.attributes) ? rec.attributes : []).map((attr: string) => (
+                          <span key={attr} style={{ background: '#161b22', border: '1px solid #30363d', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#8b949e' }}>{attr}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 8, padding: '6px 10px', background: '#0a1d0f', borderRadius: 6 }}>
+                      <p style={{ margin: 0, fontSize: 11, color: '#3fb950' }}>🛡 Holder DID: <code style={{ fontFamily: 'monospace' }}>{rec.holder_did.substring(0, 32)}…</code></p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'issue' && (
         <div style={s.grid}>
 
           {/* ── Left: Form ── */}
@@ -419,12 +547,21 @@ export default function IssuerDemoPage() {
                     </span>
                   </div>
 
-                  {/* QR code */}
+                  {/* QR code — compact payload, scannable by Google Lens */}
                   <p style={s.qrLabel}>
                     Scan to import into student wallet:
                   </p>
                   <div style={s.qrWrapper}>
-                    <QRCodeDisplay data={JSON.stringify(result.verifiable_credential)} />
+                    <QRCodeDisplay data={JSON.stringify({
+                      type:    'GovernmentID',
+                      id:      result.credential_id,
+                      issuer:  'did:web:gov.zk-auth.io',
+                      root:    result.merkle_root.substring(0, 16),
+                      fp:      result.merkle_root.substring(0, 8).toUpperCase(),
+                      issued:  result.issued_at.substring(0, 10),
+                      schema:  result.attribute_schema,
+                      verify:  `http://localhost:3001/api/verifier/request-proof`,
+                    })} />
                   </div>
 
                   {/* VC JSON accordion */}
@@ -452,6 +589,7 @@ export default function IssuerDemoPage() {
             </AnimatePresence>
           </section>
         </div>
+        )} {/* end activeTab === 'issue' */}
       </main>
     </div>
   );
@@ -553,4 +691,9 @@ const s: Record<string, React.CSSProperties> = {
   errorMsg:         { color: '#f87171', margin: '0 0 16px' },
   retryBtn:         { background: '#161b22', border: '1px solid #30363d', color: '#e6edf3',
                       borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontSize: 14 },
+  tabBar:           { display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid #21262d', paddingBottom: 0 },
+  tabBtn:           { background: 'none', border: 'none', borderBottom: '2px solid transparent', color: '#8b949e',
+                      padding: '10px 16px', fontSize: 14, cursor: 'pointer', fontWeight: 600, marginBottom: -1 },
+  tabBtnActive:     { color: '#388bfd', borderBottomColor: '#388bfd' },
+  behavioralPanel:  { background: '#0d1117', border: '1px solid #21262d', borderRadius: 12, padding: 24 },
 };

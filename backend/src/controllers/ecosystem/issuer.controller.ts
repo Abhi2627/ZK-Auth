@@ -169,7 +169,6 @@ export async function postIssueId(
           attributeCount:   sortedKeys.length,
           status:           'ACTIVE',
           expiresAt,
-          metadata: { issuerDid: GOV_ISSUER_DID, holderDid: body.holder_did },
         },
       });
 
@@ -204,6 +203,22 @@ export async function postIssueId(
 
     logger.info({ credentialId, userId }, 'Government ID issued as W3C VC');
 
+    // Write issuance record (audit trail)
+    await prisma.issuanceRecord.create({
+      data: {
+        credentialId,
+        userId,
+        credentialType:  'GovernmentID',
+        issuerDid:       GOV_ISSUER_DID,
+        holderDid:       body.holder_did,
+        issuedAt,
+        expiresAt,
+        merkleRoot,
+        attributeSchema: sortedKeys,
+        ipAddress:       req.socket?.remoteAddress ?? null,
+      },
+    }).catch((err) => logger.warn({ err }, 'Failed to write issuance record (non-fatal)'));
+
     res.status(201).json({
       credential_id:         credentialId,
       verifiable_credential: vc,
@@ -218,6 +233,52 @@ export async function postIssueId(
   } catch (err) {
     next(err);
   }
+}
+
+// ─── GET /api/issuer/history (public — admin demo portal) ──────────────────
+
+export async function getIssuanceHistoryPublic(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const limit  = Math.min(parseInt((req.query['limit']  as string) ?? '20', 10), 100);
+    const offset = parseInt((req.query['offset'] as string) ?? '0', 10);
+
+    const [records, total] = await Promise.all([
+      prisma.issuanceRecord.findMany({
+        orderBy: { issuedAt: 'desc' },
+        take:    limit,
+        skip:    offset,
+        select:  {
+          id:              true,
+          credentialId:    true,
+          credentialType:  true,
+          holderDid:       true,
+          issuedAt:        true,
+          expiresAt:       true,
+          merkleRoot:      true,
+          attributeSchema: true,
+        },
+      }),
+      prisma.issuanceRecord.count(),
+    ]);
+
+    res.status(200).json({
+      records: records.map((r) => ({
+        id:              r.id,
+        credential_id:   r.credentialId,
+        credential_type: r.credentialType,
+        holder_did:      r.holderDid,
+        issued_at:       r.issuedAt.toISOString(),
+        expires_at:      r.expiresAt?.toISOString() ?? null,
+        merkle_root:     r.merkleRoot.substring(0, 16) + '…',
+        attributes:      r.attributeSchema,
+      })),
+      total,
+    });
+  } catch (err) { next(err); }
 }
 
 // ─── GET /api/issuer/did-document ─────────────────────────────────────────────

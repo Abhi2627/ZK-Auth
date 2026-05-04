@@ -29,8 +29,14 @@ import path from 'path';
 import { groth16 } from 'snarkjs';
 import { prisma } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
-import { AppError, ErrorCode, NotFoundError } from '../../utils/errors.js';
+import { AppError, ErrorCode } from '../../utils/errors.js';
 import { env } from '../../config/env.js';
+
+// ─── Dev bypass flag ──────────────────────────────────────────────────────────
+// When SKIP_ZKP_VERIFY_DEV=true the snarkjs proof check is skipped and
+// the user is looked up by commitment_root directly.
+// NEVER set this in production — it defeats the entire security model.
+const DEV_SKIP = process.env['SKIP_ZKP_VERIFY_DEV'] === 'true' && process.env['NODE_ENV'] !== 'production';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -152,7 +158,42 @@ export class ZkpService {
   // ─── Private: core verification logic ────────────────────────────────────
 
   private async _verifyInternal(input: VerificationInput): Promise<VerificationResult> {
-    // Step 1: vKey must be loaded
+    const { proof, publicSignals, challengeNonce } = input;
+
+    // ── Dev bypass ───────────────────────────────────────────────────────────
+    if (DEV_SKIP) {
+      logger.warn(
+        { commitmentRoot: publicSignals[1] },
+        '⚠️  DEV MODE: ZKP verification skipped (SKIP_ZKP_VERIFY_DEV=true). NEVER use in production.',
+      );
+
+      const [nullifierHash, commitmentRoot] = publicSignals;
+      if (!nullifierHash || !commitmentRoot) {
+        throw new AppError(ErrorCode.INVALID_PROOF, 'Missing public signals', 400);
+      }
+
+      // Look up user by commitment_root
+      const user = await prisma.user.findUnique({
+        where:  { commitmentHash: commitmentRoot },
+        select: { id: true, status: true },
+      });
+
+      if (!user) {
+        throw new AppError(
+          ErrorCode.INVALID_PROOF,
+          'No account found for this device. Please register first.',
+          400,
+        );
+      }
+
+      if (user.status === 'SUSPENDED') {
+        throw new AppError(ErrorCode.USER_SUSPENDED, 'Account suspended', 403);
+      }
+
+      return { valid: true, nullifierHash, commitmentRoot, userId: user.id };
+    }
+
+    // ── Production path (full snarkjs verification) ───────────────────────────
     if (this._vKey === null) {
       throw new AppError(
         ErrorCode.SERVICE_UNAVAILABLE,
@@ -160,8 +201,6 @@ export class ZkpService {
         503,
       );
     }
-
-    const { proof, publicSignals, challengeNonce } = input;
 
     // Step 2: Validate public signals array structure
     if (!Array.isArray(publicSignals) || publicSignals.length !== 2) {
