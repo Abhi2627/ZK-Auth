@@ -16,6 +16,7 @@ import sys
 import time
 from concurrent import futures
 from pathlib import Path
+from typing import Optional
 
 import grpc
 import structlog
@@ -34,7 +35,7 @@ log = structlog.get_logger(__name__)
 _start_time_ms = int(time.time() * 1000)
 
 
-def build_server_credentials() -> grpc.ServerCredentials | None:
+def build_server_credentials() -> Optional[grpc.ServerCredentials]:
     """Return mTLS credentials in production, None for insecure dev mode."""
     if settings.GRPC_INSECURE:
         log.warning("grpc.insecure_mode", message="gRPC running without TLS — dev only!")

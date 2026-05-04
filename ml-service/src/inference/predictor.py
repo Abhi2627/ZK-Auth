@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import random
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 import numpy as np
 import structlog
@@ -75,7 +75,7 @@ class Predictor:
         self._threshold_critical = threshold_critical
 
         # session_id → (smoothed_score, prev_smoothed_score)
-        self._ema_state: dict[str, tuple[float, float | None]] = {}
+        self._ema_state: Dict[str, tuple[float, Optional[float]]] = {}
 
     def predict(
         self,

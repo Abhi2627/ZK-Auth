@@ -24,6 +24,7 @@ T8 Mitigation note:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -37,7 +38,7 @@ def classify(
     threshold_medium:   float = 0.45,
     threshold_high:     float = 0.75,
     threshold_critical: float = 0.90,
-    prev_score: float | None = None,
+    prev_score: Optional[float] = None,
 ) -> RiskClassification:
     """
     Map a smoothed anomaly score to a RiskClassification.

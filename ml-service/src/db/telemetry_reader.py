@@ -9,7 +9,7 @@ Called by training/train.py — not used during online inference.
 
 from __future__ import annotations
 
-from typing import Generator
+from typing import Generator, Optional
 
 import numpy as np
 import structlog
@@ -40,7 +40,7 @@ class TelemetryReader:
 
     def __init__(self, timescale_url: str) -> None:
         self._url = timescale_url
-        self._engine: Engine | None = None
+        self._engine: Optional[Engine] = None
 
     def connect(self) -> None:
         self._engine = create_engine(self._url, pool_size=2, max_overflow=0)
@@ -89,7 +89,7 @@ class TelemetryReader:
 
         X_batch: list[np.ndarray] = []
         y_batch: list[float] = []
-        current_session: str | None = None
+        current_session: Optional[str] = None
         session_events: list[tuple] = []
         session_label: float = 0.0
 

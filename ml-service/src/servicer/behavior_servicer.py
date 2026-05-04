@@ -26,6 +26,8 @@ T10 mitigation (side-channel timing defence):
 
 from __future__ import annotations
 
+from typing import Optional
+
 import time
 import random
 import string
@@ -65,7 +67,7 @@ class BehaviorAnalyzerServicer:
     def __init__(
         self,
         model_path: str,
-        scaler_path: str | None,
+        scaler_path: Optional[str],
         model_version: str,
         window_size: int,
         smoothing_alpha: float,
@@ -125,10 +127,10 @@ class BehaviorAnalyzerServicer:
                 → evict session window from registry (Layer 1 memory cleanup)
                 → reset EMA state for session
         """
-        session_id: str | None = None
+        session_id: Optional[str] = None
 
         try:
-            prev_seq_num: int | None = None
+            prev_seq_num: Optional[int] = None
 
             for event in request_iterator:
                 # Extract session_id from first event
