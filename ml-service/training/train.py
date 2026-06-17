@@ -113,7 +113,7 @@ def main() -> None:
             monitor="val_loss", factor=0.5, patience=3, min_lr=1e-6, verbose=1,
         ),
         tf.keras.callbacks.ModelCheckpoint(
-            filepath=args.output + ".best",
+            filepath=args.output.replace(".keras", "") + ".best.keras",
             monitor="val_auc", mode="max", save_best_only=True, verbose=1,
         ),
     ]

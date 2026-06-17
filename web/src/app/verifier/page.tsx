@@ -186,6 +186,13 @@ export default function VerifierPage() {
 
   const credType = CREDENTIAL_TYPES.find(t => t.id === credTypeId) ?? CREDENTIAL_TYPES[0]!;
 
+  // Derived BEFORE the useWsSubscribe hooks below, since their callbacks'
+  // dependency arrays reference activeClaims. `const` bindings are not
+  // hoisted the way `function` declarations are — referencing activeClaims
+  // in a callback defined above this line throws "Cannot access 'activeClaims'
+  // before initialization" on every render, not intermittently.
+  const activeClaims = credType.claims.filter(c => selectedClaims.includes(c.id));
+
   // Live WS push — fires when holder approves or rejects from their inbox/mobile
   useWsSubscribe('VERIFY_REQUEST_APPROVED', useCallback((payload: unknown) => {
     const p = payload as {
@@ -262,8 +269,6 @@ export default function VerifierPage() {
 
   const toggleClaim = (id: string) =>
     setSelectedClaims(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
-
-  const activeClaims = credType.claims.filter(c => selectedClaims.includes(c.id));
 
   // Generate QR proof request
   const generate = useCallback(async () => {

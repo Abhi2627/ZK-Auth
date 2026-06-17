@@ -40,17 +40,40 @@ const ZKEY_PATH = '/circuits/auth/auth.zkey';
 
 export interface ProveResult {
   proof: Groth16Proof;
-  /** [nullifier_hash, commitment_root] as decimal field element strings */
-  publicSignals: [string, string];
+  /** [nullifier_hash, commitment_root, nonce] — the FULL public signal set
+   *  produced by the circuit. auth.circom declares `nonce` as a circuit
+   *  input AND outputs nullifier_hash + commitment_root, so Circom's
+   *  public signal ordering is [outputs..., declared public inputs...]:
+   *    [0] nullifier_hash
+   *    [1] commitment_root
+   *    [2] nonce
+   *  Do NOT truncate this array — snarkjs verification requires all 3
+   *  signals to reconstruct the correct linear combination. */
+  publicSignals: [string, string, string];
 }
 
 // ─── Worker script source ─────────────────────────────────────────────────────
 // Inlined as a template literal — bundled into the main JS chunk by webpack.
-// The worker imports snarkjs from a CDN-compatible path. In production,
-// replace the importScripts URL with your own hosted copy.
+// The worker imports snarkjs from a same-origin static file at /public/vendor/
+// snarkjs.min.js. This MUST be same-origin (not a third-party CDN) because
+// ad blockers / privacy browsers (Brave, uBlock, etc.) and CSP policies
+// frequently block third-party importScripts() calls from Web Workers,
+// silently causing fullProve() to never run and the caller to fall back
+// to whatever error-handling path it has (do NOT mask this with a mock proof).
+//
+// IMPORTANT — must be an ABSOLUTE URL: the worker itself runs from a Blob URL
+// (blob:http://localhost:3000/<uuid>), NOT from the page's own URL. A
+// root-relative path like '/vendor/snarkjs.min.js' cannot be resolved against
+// a blob: base, and importScripts() throws "The URL '...' is invalid"
+// synchronously — this is a URL-resolution failure, not a network/CSP
+// failure, and it happens before any request is even attempted. We build the
+// worker script with the snarkjs URL already baked in as fully-qualified
+// (computed on the main thread via window.location.origin, where origin IS
+// well-defined) so the worker never has to resolve a relative path itself.
 
-const WORKER_SCRIPT = `
-importScripts('https://cdn.jsdelivr.net/npm/snarkjs@0.7.4/build/snarkjs.min.js');
+function buildWorkerScript(snarkjsAbsoluteUrl: string): string {
+  return `
+importScripts('${snarkjsAbsoluteUrl}');
 
 self.onmessage = async function(e) {
   const { witnessInput, wasmPath, zkeyPath, id } = e.data;
@@ -66,6 +89,7 @@ self.onmessage = async function(e) {
   }
 };
 `;
+}
 
 // ─── Worker pool ──────────────────────────────────────────────────────────────
 // We maintain a single reusable worker. Proof generation is sequential
@@ -88,7 +112,8 @@ function getWorker(): Worker | null {
   if (_worker !== null) return _worker;
 
   try {
-    const blob = new Blob([WORKER_SCRIPT], { type: 'application/javascript' });
+    const snarkjsAbsoluteUrl = new URL('/vendor/snarkjs.min.js', window.location.origin).toString();
+    const blob = new Blob([buildWorkerScript(snarkjsAbsoluteUrl)], { type: 'application/javascript' });
     _workerBlobUrl = URL.createObjectURL(blob);
     _worker = new Worker(_workerBlobUrl);
 
@@ -111,7 +136,7 @@ function getWorker(): Worker | null {
 
       pending.resolve({
         proof,
-        publicSignals: [publicSignals[0]!, publicSignals[1]!],
+        publicSignals: [publicSignals[0]!, publicSignals[1]!, publicSignals[2]!],
       });
     };
 
@@ -177,7 +202,18 @@ async function generateInWorker(
       reject:  (err)    => { clearTimeout(timeout); reject(err); },
     });
 
-    worker.postMessage({ witnessInput, wasmPath: WASM_PATH, zkeyPath: ZKEY_PATH, id });
+    // Resolve circuit artifact paths to ABSOLUTE URLs before sending to the
+    // worker. Same root cause as the snarkjs importScripts fix above: the
+    // worker's execution context is the blob: URL it was created from, so
+    // snarkjs's internal fetch(wasmPath) cannot resolve a root-relative path
+    // like '/circuits/auth/auth.wasm' against that base — it throws "Failed
+    // to parse URL" before any request is attempted. window.location.origin
+    // is only meaningful here on the main thread, so we resolve it here and
+    // post the absolute URLs across, rather than inside the worker.
+    const wasmAbsoluteUrl = new URL(WASM_PATH, window.location.origin).toString();
+    const zkeyAbsoluteUrl = new URL(ZKEY_PATH, window.location.origin).toString();
+
+    worker.postMessage({ witnessInput, wasmPath: wasmAbsoluteUrl, zkeyPath: zkeyAbsoluteUrl, id });
   });
 }
 
@@ -201,7 +237,7 @@ async function generateOnMainThread(
 
   return {
     proof: proof as Groth16Proof,
-    publicSignals: [publicSignals[0]!, publicSignals[1]!],
+    publicSignals: [publicSignals[0]!, publicSignals[1]!, publicSignals[2]!],
   };
 }
 

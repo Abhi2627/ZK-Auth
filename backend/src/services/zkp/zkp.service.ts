@@ -6,13 +6,22 @@
  *      All subsequent verifications use the in-memory vKey — zero disk I/O
  *      on the hot authentication path.
  *   2. Verify SnarkJS Groth16 proofs for the auth circuit.
- *   3. Extract and validate public signals (nullifier_hash, commitment_root).
+ *   3. Extract and validate public signals (nullifier_hash, commitment_root, nonce).
  *   4. Pad verification response time to a fixed window to mitigate T14
  *      (timing enumeration — attacker inferring user existence from latency).
  *
- * Circuit public signals layout (enforced by auth.circom):
- *   publicSignals[0] — nullifier_hash: hex( H(secret || nonce) )
- *   publicSignals[1] — commitment_root: H(secret) — matches auth.users.commitment_hash
+ * Circuit public signals layout (enforced by auth.circom, confirmed via auth.sym):
+ *   publicSignals[0] — nullifier_hash:  Poseidon(secret, nonce)  [circuit OUTPUT]
+ *   publicSignals[1] — commitment_root: Poseidon(secret)         [circuit OUTPUT]
+ *   publicSignals[2] — nonce:           the challenge nonce       [circuit public INPUT]
+ *
+ *   IMPORTANT: Circom automatically makes circuit outputs public regardless of
+ *   the `main {public [...]}` annotation — that annotation only affects
+ *   declared *inputs*. auth.circom declares `nonce` in `public [nonce]`, and
+ *   nullifier_hash + commitment_root are outputs, so ALL THREE end up in the
+ *   public signals array snarkjs produces. Passing only 2 signals to
+ *   groth16.verify() will ALWAYS fail — it can't reconstruct the correct
+ *   linear combination without the full signal set.
  *
  * Security invariants:
  *   - vKey is loaded ONCE and treated as immutable. Any change requires a
@@ -49,12 +58,21 @@ export interface Groth16Proof {
   pi_b: [[string, string], [string, string], [string, string]];
   pi_c: [string, string, string];
   protocol: 'groth16';
-  curve: 'bn254';
+  /**
+   * snarkjs's groth16.fullProve() emits curve: "bn128", NOT "bn254" — this is
+   * a pure naming-convention difference, not a different curve. "bn128"
+   * comes from the original alt_bn128 / Ethereum EIP-196/197 precompile name;
+   * "BN254" is the more common modern name referring to the ~254-bit prime
+   * field size of the SAME curve. Accept both spellings so we don't reject
+   * every real proof snarkjs produces while still rejecting genuinely wrong
+   * curves (e.g. bls12-381).
+   */
+  curve: 'bn128' | 'bn254';
 }
 
 export interface VerificationInput {
   proof: Groth16Proof;
-  publicSignals: [string, string];   // [nullifier_hash, commitment_root]
+  publicSignals: [string, string, string];  // [nullifier_hash, commitment_root, nonce]
   challengeNonce: string;            // hex — fetched from Redis by controller
 }
 
@@ -167,7 +185,7 @@ export class ZkpService {
         '⚠️  DEV MODE: ZKP verification skipped (SKIP_ZKP_VERIFY_DEV=true). NEVER use in production.',
       );
 
-      const [nullifierHash, commitmentRoot] = publicSignals;
+      const [nullifierHash, commitmentRoot, _nonceSignal] = publicSignals;
       if (!nullifierHash || !commitmentRoot) {
         throw new AppError(ErrorCode.INVALID_PROOF, 'Missing public signals', 400);
       }
@@ -203,22 +221,61 @@ export class ZkpService {
     }
 
     // Step 2: Validate public signals array structure
-    if (!Array.isArray(publicSignals) || publicSignals.length !== 2) {
+    // The circuit produces exactly 3 public signals: [nullifier_hash,
+    // commitment_root, nonce]. See module header for why all 3 are required.
+    if (!Array.isArray(publicSignals) || publicSignals.length !== 3) {
       throw new AppError(
         ErrorCode.INVALID_PROOF,
-        'Invalid public signals: expected exactly [nullifier_hash, commitment_root]',
+        'Invalid public signals: expected exactly [nullifier_hash, commitment_root, nonce]',
         400,
       );
     }
 
-    const [nullifierHash, commitmentRoot] = publicSignals;
+    const [nullifierHash, commitmentRoot, nonceSignal] = publicSignals;
 
-    if (!isValidFieldElement(nullifierHash) || !isValidFieldElement(commitmentRoot)) {
+    if (
+      !isValidFieldElement(nullifierHash) ||
+      !isValidFieldElement(commitmentRoot) ||
+      !isValidFieldElement(nonceSignal)
+    ) {
       throw new AppError(
         ErrorCode.INVALID_PROOF,
         'Public signals contain invalid field elements',
         400,
       );
+    }
+
+    // Step 2b: Bind the proof to THIS challenge — the nonce signal inside the
+    // proof's public inputs must match the nonce the server actually issued
+    // for this challenge_id. Without this check, groth16.verify() only proves
+    // "this nonce value was used inside a valid proof" — not "this is the
+    // nonce WE issued for THIS request" — so a proof for a stale/foreign
+    // challenge with a matching nullifier/commitment could otherwise pass.
+    //
+    // IMPORTANT: the browser's witness builder (witness.ts hexToFieldElement)
+    // reduces the raw hex nonce mod the BN254 field prime BEFORE it becomes a
+    // circuit input, since a 32-byte (256-bit) nonce can exceed the ~254-bit
+    // field modulus. We MUST apply the identical reduction here, or honest
+    // proofs whose raw nonce happens to exceed the field modulus would be
+    // rejected even though nonceSignal is exactly what the circuit produced.
+    const BN254_FIELD_MODULUS = BigInt(
+      '21888242871839275222246405745257275088548364400416034343698204186575808495617',
+    );
+    let challengeNonceField: bigint;
+    let proofNonceField: bigint;
+    try {
+      const rawNonce = BigInt('0x' + challengeNonce);
+      challengeNonceField = ((rawNonce % BN254_FIELD_MODULUS) + BN254_FIELD_MODULUS) % BN254_FIELD_MODULUS;
+      proofNonceField = BigInt(nonceSignal);
+    } catch {
+      throw new AppError(ErrorCode.INVALID_PROOF, 'Malformed nonce encoding', 400);
+    }
+    if (challengeNonceField !== proofNonceField) {
+      logger.warn(
+        { challengeNonce, nonceSignal },
+        'Proof nonce signal does not match issued challenge nonce — rejecting',
+      );
+      throw new AppError(ErrorCode.INVALID_PROOF, 'Proof verification failed', 400);
     }
 
     // Step 3: Validate the proof object structure before passing to snarkjs
@@ -338,10 +395,10 @@ function validateProofShape(proof: unknown): asserts proof is Groth16Proof {
     );
   }
 
-  if (p['curve'] !== 'bn254') {
+  if (p['curve'] !== 'bn128' && p['curve'] !== 'bn254') {
     throw new AppError(
       ErrorCode.INVALID_PROOF,
-      'Unsupported curve — only bn254 accepted',
+      'Unsupported curve — only bn128/bn254 accepted',
       400,
     );
   }

@@ -26,27 +26,21 @@ function mod(a: bigint): bigint {
   return ((a % F) + F) % F;
 }
 
-// ─── Poseidon via snarkjs ─────────────────────────────────────────────────────
-// snarkjs bundles ffjavascript which has the exact circomlib Poseidon implementation.
-// Using it here ensures commitment_root computed in the browser matches what
-// auth.circom computes inside the WASM prover — they must be identical.
+// ─── Poseidon via circomlibjs ─────────────────────────────────────────────────
+// circomlibjs ships the exact circomlib Poseidon implementation used by
+// circom's Poseidon() template — same round constants, same field, same output.
+// (snarkjs does NOT export buildPoseidon — that lives in circomlibjs.)
 
 /**
- * Compute Poseidon hash of inputs using snarkjs's built-in Poseidon.
- * snarkjs exposes `buildPoseidon` which returns the exact circomlib Poseidon.
+ * Compute Poseidon hash of inputs using circomlibjs's Poseidon.
  *
  * @param inputs — array of BigInt field elements, length 1 or 2
  * @returns Poseidon hash as BigInt (BN254 field element)
  */
 async function poseidonHash(inputs: bigint[]): Promise<bigint> {
-  // snarkjs bundles ffjavascript which has the correct Poseidon implementation
-  const snarkjs = await import('snarkjs');
-  // buildPoseidon returns a function F(inputs) → F_p element
-  // @ts-expect-error buildPoseidon exists at runtime but TS types are incomplete
-  const poseidon: (inputs: bigint[]) => Uint8Array = await snarkjs.buildPoseidon();
+  const { buildPoseidon } = await import('circomlibjs');
+  const poseidon = await buildPoseidon();
   const result = poseidon(inputs);
-  // result is a Uint8Array representing an F_p element; convert to BigInt
-  // @ts-expect-error F function on poseidon converts to bigint
   return poseidon.F.toObject(result);
 }
 

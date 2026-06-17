@@ -122,21 +122,37 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       let proof: Record<string, unknown>;
       let publicSignals: string[];
 
-      try {
-        const { generateAuthProof } = await import('../../lib/zkp/prover');
-        const result = await generateAuthProof(witness);
-        proof         = result.proof as unknown as Record<string, unknown>;
-        publicSignals = result.publicSignals;
-      } catch {
-        // Circuit WASM not compiled — use mock proof with correct public signals
-        proof = {
-          pi_a: ['1', '2', '1'],
-          pi_b: [['10', '11'], ['12', '13'], ['1', '0']],
-          pi_c: ['4', '5', '1'],
-          protocol: 'groth16',
-          curve: 'bn254',
-        };
-        publicSignals = [nullifier, commitment];
+      // NOTE: there is intentionally NO silent mock-proof fallback here.
+      // A previous version of this code caught any error from
+      // generateAuthProof() (WASM load failure, worker error, Brave/adblocker
+      // blocking importScripts, etc.) and substituted a hardcoded fake proof
+      // with garbage curve points. That fake proof could never pass
+      // groth16.verify() server-side, so the user always saw "Proof
+      // verification failed" regardless of what actually went wrong —
+      // masking the real error (e.g. WASM 404, worker script blocked) behind
+      // a generic crypto failure message. If real proof generation fails,
+      // we surface that failure directly so it's actually diagnosable.
+      const { generateAuthProof } = await import('../../lib/zkp/prover');
+      const result = await generateAuthProof(witness);
+      proof         = result.proof as unknown as Record<string, unknown>;
+      publicSignals = result.publicSignals;
+
+      // Sanity check: nullifier/commitment computed independently in this
+      // component should match what the real prover embedded in publicSignals.
+      // A mismatch here means witness.ts and prover.ts have diverged (e.g.
+      // different Poseidon implementations) — surface it loudly rather than
+      // submitting a proof we already know the server will reject.
+      if (publicSignals[0] !== nullifier || publicSignals[1] !== commitment) {
+        console.error('[ZK-Auth] Public signal mismatch', {
+          expectedNullifier: nullifier,
+          actualNullifier: publicSignals[0],
+          expectedCommitment: commitment,
+          actualCommitment: publicSignals[1],
+        });
+        throw new Error(
+          'Internal error: computed signals do not match prover output. ' +
+          'This indicates a bug, not a credentials problem — please report it.',
+        );
       }
 
       // Step 4: submit

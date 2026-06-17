@@ -19,7 +19,13 @@ export interface Groth16Proof {
   pi_b:     [[string, string], [string, string], [string, string]];
   pi_c:     [string, string, string];
   protocol: 'groth16';
-  curve:    'bn254';
+  /**
+   * snarkjs's groth16.fullProve() emits curve: "bn128", NOT "bn254" — same
+   * curve (alt_bn128 / Ethereum EIP-196/197 naming vs. the more common
+   * "BN254" name referring to the curve's ~254-bit prime field size).
+   * Accept both spellings.
+   */
+  curve:    'bn128' | 'bn254';
 }
 
 // ─── Challenge / Nonce ───────────────────────────────────────────────────────
@@ -40,8 +46,11 @@ export interface ChallengeResponse {
 export interface ProofSubmission {
   challenge_id: string;
   proof: Groth16Proof;
-  /** [nullifier_hash, commitment_root] */
-  public_signals: [string, string];
+  /** [nullifier_hash, commitment_root, nonce] — matches auth.circom's actual
+   *  public signal order. Circom auto-publicizes circuit outputs regardless
+   *  of the `public[]` declaration, so nullifier_hash + commitment_root
+   *  (outputs) plus nonce (declared public input) are ALL public signals. */
+  public_signals: [string, string, string];
 }
 
 export interface AuthTokens {

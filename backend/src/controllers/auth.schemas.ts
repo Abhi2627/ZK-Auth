@@ -55,8 +55,15 @@ const groth16ProofSchema = z
     protocol: z.literal('groth16', {
       errorMap: () => ({ message: 'Only groth16 protocol is supported' }),
     }),
-    curve: z.literal('bn254', {
-      errorMap: () => ({ message: 'Only bn254 curve is supported' }),
+    /**
+     * snarkjs's groth16.fullProve() emits curve: "bn128", NOT "bn254" — same
+     * curve, different historical name (alt_bn128 / Ethereum EIP-196/197
+     * naming vs. the more modern "BN254" name referring to the ~254-bit
+     * prime field). Accept both so real snarkjs output isn't rejected here
+     * before even reaching the verification service.
+     */
+    curve: z.enum(['bn128', 'bn254'], {
+      errorMap: () => ({ message: 'Only bn128/bn254 curve is supported' }),
     }),
   })
   .strict();
@@ -66,13 +73,17 @@ export const verifyRequestSchema = z
     challenge_id: uuidSchema,
     proof: groth16ProofSchema,
     /**
-     * Exactly two public signals from the auth circuit:
+     * Exactly three public signals from the auth circuit, in circuit order:
      *   [0] nullifier_hash  — decimal string (BN254 field element)
      *   [1] commitment_root — decimal string (BN254 field element)
+     *   [2] nonce            — decimal string (BN254 field element) — circuit
+     *       input `nonce` is also a public signal (Circom auto-publicizes
+     *       declared public inputs); without it groth16.verify() cannot
+     *       reconstruct the correct linear combination and ALWAYS rejects.
      */
     public_signals: z
-      .tuple([hexFieldElementSchema, hexFieldElementSchema])
-      .describe('Must be exactly [nullifier_hash, commitment_root]'),
+      .tuple([hexFieldElementSchema, hexFieldElementSchema, hexFieldElementSchema])
+      .describe('Must be exactly [nullifier_hash, commitment_root, nonce] — matches auth.circom public signal order'),
   })
   .strict();
 
