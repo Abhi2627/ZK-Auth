@@ -52,6 +52,17 @@ export interface WsSessionContext {
 const _connections = new Map<string, WebSocket>();
 const _contexts    = new Map<string, WsSessionContext>();
 
+/** Push a message to ALL sessions belonging to a user. */
+export function pushToUser(userId: string, message: object): number {
+  let sent = 0;
+  _contexts.forEach((ctx, sessionId) => {
+    if (ctx.userId === userId) {
+      if (pushToSession(sessionId, message)) sent++;
+    }
+  });
+  return sent;
+}
+
 /** Push a message to a specific session's WebSocket. Returns false if not found. */
 export function pushToSession(sessionId: string, message: object): boolean {
   const ws = _connections.get(sessionId);

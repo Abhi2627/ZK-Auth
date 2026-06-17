@@ -27,13 +27,26 @@ let _accessToken: string | null = null;
 
 export function setAccessToken(token: string): void {
   _accessToken = token;
+  // Also persist to sessionStorage so it survives page navigation
+  // sessionStorage is cleared when the browser tab closes (safer than localStorage)
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('zk_access_token', token);
+  }
 }
 
 export function clearAccessToken(): void {
   _accessToken = null;
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem('zk_access_token');
+  }
 }
 
 export function getAccessToken(): string | null {
+  // Restore from sessionStorage if in-memory token was lost (page navigation)
+  if (!_accessToken && typeof window !== 'undefined') {
+    const stored = sessionStorage.getItem('zk_access_token');
+    if (stored) _accessToken = stored;
+  }
   return _accessToken;
 }
 

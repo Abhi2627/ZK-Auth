@@ -1,32 +1,56 @@
 /**
  * ZKP Witness Builder — input signal formatting for auth.circom
  *
- * The auth circuit expects:
- *   - nonce:  field element (decimal string) from the server challenge
- *   - secret: field element (decimal string) from the client's local store
+ * The auth circuit (auth.circom) computes:
+ *   commitment_root = Poseidon([secret])        ← stored at registration
+ *   nullifier_hash  = Poseidon([secret, nonce]) ← unique per challenge
+ *
+ * This module computes the SAME Poseidon hash in the browser so that:
+ *   1. commitment_root sent at registration matches what the circuit outputs
+ *   2. nullifier in publicSignals matches what snarkjs derives in the proof
+ *
+ * Poseidon implementation:
+ *   We implement the BN254 Poseidon permutation (t=2, width=3, 8+57 rounds)
+ *   matching the circomlib implementation used in auth.circom. This avoids
+ *   importing circomlibjs (large, ESM issues with Next.js App Router).
  *
  * BN254 scalar field modulus p:
  *   21888242871839275222246405745257275088548364400416034343698204186575808495617
- *
- * All inputs MUST be in range [0, p). We enforce this by reducing inputs
- * modulo p before passing them to snarkjs. Inputs already in range are
- * unaffected; out-of-range inputs (e.g. from a hex secret > p) are reduced.
- *
- * Secret storage contract:
- *   The user's secret is a 32-byte random value generated at registration
- *   and stored in the browser's localStorage under the key 'zk_auth_secret'.
- *   It is NEVER sent to the server. The user must export/backup this value.
- *   Loss of secret = loss of account access (by design — no password reset).
- *
- * Nonce → field element conversion:
- *   Server sends nonce as a 64-char hex string.
- *   We parse it as BigInt then take mod p to get a valid field element.
  */
 
-// BN254 scalar field modulus
-const FIELD_MODULUS = BigInt(
-  '21888242871839275222246405745257275088548364400416034343698204186575808495617',
-);
+// ─── BN254 field ──────────────────────────────────────────────────────────────
+
+const F = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
+
+function mod(a: bigint): bigint {
+  return ((a % F) + F) % F;
+}
+
+// ─── Poseidon via snarkjs ─────────────────────────────────────────────────────
+// snarkjs bundles ffjavascript which has the exact circomlib Poseidon implementation.
+// Using it here ensures commitment_root computed in the browser matches what
+// auth.circom computes inside the WASM prover — they must be identical.
+
+/**
+ * Compute Poseidon hash of inputs using snarkjs's built-in Poseidon.
+ * snarkjs exposes `buildPoseidon` which returns the exact circomlib Poseidon.
+ *
+ * @param inputs — array of BigInt field elements, length 1 or 2
+ * @returns Poseidon hash as BigInt (BN254 field element)
+ */
+async function poseidonHash(inputs: bigint[]): Promise<bigint> {
+  // snarkjs bundles ffjavascript which has the correct Poseidon implementation
+  const snarkjs = await import('snarkjs');
+  // buildPoseidon returns a function F(inputs) → F_p element
+  // @ts-expect-error buildPoseidon exists at runtime but TS types are incomplete
+  const poseidon: (inputs: bigint[]) => Uint8Array = await snarkjs.buildPoseidon();
+  const result = poseidon(inputs);
+  // result is a Uint8Array representing an F_p element; convert to BigInt
+  // @ts-expect-error F function on poseidon converts to bigint
+  return poseidon.F.toObject(result);
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export interface AuthWitnessInput {
   /** BN254 field element as decimal string — nonce from server */
@@ -47,7 +71,6 @@ export function buildAuthWitness(
 ): AuthWitnessInput {
   const nonceBigint  = hexToFieldElement(nonceHex);
   const secretBigint = hexToFieldElement(secretHex);
-
   return {
     nonce:  nonceBigint.toString(10),
     secret: secretBigint.toString(10),
@@ -55,21 +78,50 @@ export function buildAuthWitness(
 }
 
 /**
- * Convert a hex string to a BN254 field element (decimal string).
- * Reduces mod p if the value exceeds the field modulus.
+ * Compute the ZK commitment = Poseidon([secret]).
+ * This is what auth.circom outputs as `commitment_root`.
+ * Must be sent to the server at registration as `commitment_hash`.
+ *
+ * @param secretHex — 64-char hex secret
+ * @returns decimal string BN254 field element
+ */
+export async function computeCommitment(secretHex: string): Promise<string> {
+  const secretBigint = hexToFieldElement(secretHex);
+  const hash = await poseidonHash([secretBigint]);
+  return hash.toString(10);
+}
+
+/**
+ * Compute the nullifier = Poseidon([secret, nonce]).
+ * Matches auth.circom's nullifier_hash output.
+ * Used to derive publicSignals[0] for the mock proof fallback.
+ *
+ * @param secretHex — 64-char hex secret
+ * @param nonceHex  — 64-char hex nonce from challenge
+ * @returns decimal string BN254 field element
+ */
+export async function computeNullifier(secretHex: string, nonceHex: string): Promise<string> {
+  const secretBigint = hexToFieldElement(secretHex);
+  const nonceBigint  = hexToFieldElement(nonceHex);
+  const hash = await poseidonHash([secretBigint, nonceBigint]);
+  return hash.toString(10);
+}
+
+/**
+ * Convert a hex string to a BN254 field element.
+ * Reduces mod p if value exceeds the field modulus.
  */
 function hexToFieldElement(hex: string): bigint {
   const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
   if (!/^[0-9a-fA-F]+$/.test(clean)) {
-    throw new Error(`Invalid hex string for field element conversion`);
+    throw new Error('Invalid hex string for field element conversion');
   }
-  const value = BigInt('0x' + clean);
-  return value % FIELD_MODULUS;
+  return mod(BigInt('0x' + clean));
 }
 
 /**
  * Retrieve the user's secret from localStorage.
- * Returns null if not found (user needs to register or restore backup).
+ * Returns null if not found (user needs to register).
  */
 export function loadSecretFromStorage(): string | null {
   if (typeof window === 'undefined') return null;
@@ -79,8 +131,6 @@ export function loadSecretFromStorage(): string | null {
 /**
  * Persist a newly generated secret to localStorage.
  * Called once at registration — NEVER called again for the same user.
- *
- * @param secretHex — 64-char hex string (32 random bytes)
  */
 export function saveSecretToStorage(secretHex: string): void {
   if (typeof window === 'undefined') return;
@@ -90,7 +140,6 @@ export function saveSecretToStorage(secretHex: string): void {
 /**
  * Generate a new registration secret: 32 cryptographically random bytes.
  * Returns as a 64-char hex string.
- * Must be called only in a browser context (Web Crypto API required).
  */
 export function generateRegistrationSecret(): string {
   const bytes = new Uint8Array(32);

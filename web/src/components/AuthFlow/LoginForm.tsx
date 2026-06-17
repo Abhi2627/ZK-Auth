@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { setAccessToken } from '../../lib/api';
 import { motion, AnimatePresence }     from 'framer-motion';
 import {
   buildAuthWitness,
+  computeCommitment,
+  computeNullifier,
   loadSecretFromStorage,
   generateRegistrationSecret,
   saveSecretToStorage,
@@ -63,8 +66,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     try {
       const secretHex = generateRegistrationSecret();
 
-      // Compute commitment = first 15 hex chars as decimal (demo, matches backend)
-      const commitment = String(parseInt(secretHex.slice(0, 15), 16));
+      // Compute commitment = Poseidon([secret]) — matches auth.circom constraint
+      // This MUST match what the circuit outputs as commitment_root
+      const commitment = await computeCommitment(secretHex);
       const pubKeyHex  = secretHex.slice(0, 64).padStart(64, '0');
 
       const data = await apiPost('/api/v1/auth/register', {
@@ -110,11 +114,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       // Step 3: proof (dynamic import so webpack can tree-shake)
       setCryptoState(CRYPTO_STATES[2]);
 
-      // commitment = same value stored at registration
-      // Registration sent: String(parseInt(secretHex.slice(0,15), 16))
-      const commitment    = String(parseInt(secretHex.slice(0, 15), 16));
-      const nullifierRaw  = witness.nonce + witness.secret; // deterministic nullifier
-      const nullifier     = String(parseInt(nullifierRaw.slice(0, 15), 16));
+      // commitment = Poseidon([secret]) — same value registered with server
+      // nullifier  = Poseidon([secret, nonce]) — matches circuit output
+      const commitment = await computeCommitment(secretHex);
+      const nullifier  = await computeNullifier(secretHex, nonce);
 
       let proof: Record<string, unknown>;
       let publicSignals: string[];
@@ -147,9 +150,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
       setCryptoState(null);
       setFlow({ stage: 'success' });
+
+      // Store token so it survives navigation to /dashboard
+      const accessToken = tokens['access_token'] as string;
+      setAccessToken(accessToken);
+
       onSuccess?.(
         tokens['session_id'] as string,
-        tokens['access_token'] as string,
+        accessToken,
       );
 
     } catch (err) {

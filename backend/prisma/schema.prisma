@@ -323,6 +323,40 @@ model DisclosureProof {
   @@schema("zkp")
 }
 
+// ─── Platform: Registered Institutes ────────────────────────────────────────
+// Each institute that registers gets a row here.
+// Private key is NEVER stored — only public key (Ed25519 hex) + DID.
+model Institute {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String
+  slug            String          @unique
+  did             String          @unique
+  instituteType   String          @map("institute_type")
+  email           String          @unique
+  contactName     String          @map("contact_name")
+  website         String?         @default("")
+  publicKeyHex    String          @map("public_key_hex")
+  apiKeyHash      String          @map("api_key_hash")   // SHA-256(api_key)
+  credentialTypes Json            @map("credential_types")
+  plan            String          @default("free")
+  status          InstituteStatus @default(ACTIVE)
+  registeredAt    DateTime        @default(now()) @map("registered_at") @db.Timestamptz
+  lastActiveAt    DateTime?       @map("last_active_at") @db.Timestamptz
+
+  @@index([slug])
+  @@index([email])
+  @@map("institutes")
+  @@schema("zkp")
+}
+
+enum InstituteStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+
+  @@schema("zkp")
+}
+
 // ─── Credential Issuance History ───────────────────────────────────────────────────────────
 model IssuanceRecord {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

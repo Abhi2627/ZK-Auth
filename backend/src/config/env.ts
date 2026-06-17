@@ -55,6 +55,9 @@ const envSchema = z.object({
   RISK_STEP_UP_HARD_THRESHOLD: z.coerce.number().min(0).max(1).default(0.90),
   RISK_EMA_ALPHA: z.coerce.number().min(0).max(1).default(0.3),
 
+  // Issuer
+  ISSUER_SECRET_TOKEN: z.string().min(32),
+
   // Rate Limiting
   RATE_LIMIT_CHALLENGE_PER_MIN: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_AUTH_PER_MIN: z.coerce.number().int().positive().default(20),

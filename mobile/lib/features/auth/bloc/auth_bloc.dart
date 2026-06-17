@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/api/auth_api.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/telemetry/ws_telemetry.dart';
+import '../../../core/zkp/poseidon_bn254.dart' as poseidon;
 
 // ─── Events ───────────────────────────────────────────────────────────────────
 
@@ -136,17 +137,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthRegistering());
     try {
-      // 1. Generate secret
+      // 1. Generate cryptographically random 32-byte secret
       final secretHex = _generateSecretHex();
 
-      // 2. Compute commitment (SHA-256 as decimal — demo Poseidon stand-in)
-      final commitmentHex   = _sha256Hex(secretHex);
-      final commitmentDecimal = _hexToDecimal(commitmentHex);
+      // 2. Compute commitment = Poseidon([secret]) — matches auth.circom exactly
+      //    This is what the circuit outputs as commitment_root.
+      //    Must be sent as-is to the server at registration.
+      final secretField = poseidon.hexToField(secretHex);
+      final commitmentDecimal = poseidon.poseidonHash([secretField]);
 
-      // 3. Register with backend
+      // 3. Register with backend — send Poseidon commitment, NOT SHA-256
       await _authApi.register(
         commitmentHash: commitmentDecimal,
-        publicKeyHex:   commitmentHex, // use commitment as public key in demo
+        publicKeyHex:   secretHex.substring(0, 64).padLeft(64, '0'),
+        deviceLabel:    'ZK-Auth Mobile Wallet',
       );
 
       // 4. Save secret locally (NEVER sent to server again)
@@ -296,9 +300,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required String nonceHex,
     required String secretHex,
   }) {
-    final nullifier = _sha256Hex('$secretHex:$nonceHex');
-    final nullifierDecimal = _hexToDecimal(nullifier);
-    final commitment = _hexToDecimal(_sha256Hex(secretHex));
+    // Compute Poseidon-correct public signals — must match auth.circom:
+    //   publicSignals[0] = nullifier = Poseidon([secret, nonce])
+    //   publicSignals[1] = commitment = Poseidon([secret])
+    final secretField = poseidon.hexToField(secretHex);
+    final nonceField  = poseidon.hexToField(nonceHex);
+    final nullifier   = poseidon.poseidonHash([secretField, nonceField]);
+    final commitment  = poseidon.poseidonHash([secretField]);
 
     return _MockProof(
       proof: {
@@ -308,7 +316,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         'protocol': 'groth16',
         'curve': 'bn254',
       },
-      publicSignals: [nullifierDecimal, commitment],
+      publicSignals: [nullifier, commitment],
     );
   }
 }

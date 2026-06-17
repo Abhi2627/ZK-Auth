@@ -3,12 +3,14 @@
  */
 
 import http from 'http';
+import { execSync } from 'child_process';
 import { env } from './config/env.js';
 import { createApp } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { connectRedis, disconnectRedis } from './config/redis.js';
 import { connectGrpc, disconnectGrpc } from './config/grpc.js';
 import { attachWebSocketServer, closeAllConnections } from './websocket/wsServer.js';
+import { initVerifyRequestNotifier, shutdownVerifyRequestNotifier } from './services/verifyRequest/notifier.service.js';
 import { zkpService } from './services/zkp/zkp.service.js';
 import { disclosureService } from './services/credential/disclosure.service.js';
 import { connectTelemetryDB, disconnectTelemetryDB } from './services/telemetry/telemetry.service.js';
@@ -16,8 +18,39 @@ import { telemetryService } from './services/telemetry/telemetry.service.js';
 import { behaviorGrpcClient } from './grpc/behaviorClient.js';
 import { logger } from './utils/logger.js';
 
+// ── Auto-migrate on startup (idempotent — safe to run every time) ─────────────
+function runMigrations(): void {
+  try {
+    logger.info('Running Prisma migrations…');
+    execSync('npx prisma migrate deploy', {
+      cwd:   process.cwd(),
+      stdio: 'pipe',
+      env:   { ...process.env },
+    });
+    logger.info('Prisma migrations up to date');
+  } catch (err: unknown) {
+    // In dev, migrate deploy can fail if there are unapplied dev migrations
+    // Fall back to migrate dev to auto-create the migration
+    logger.warn('migrate deploy failed — trying migrate dev (dev mode only)');
+    try {
+      execSync('npx prisma migrate dev --name auto --skip-seed', {
+        cwd:   process.cwd(),
+        stdio: 'pipe',
+        env:   { ...process.env },
+      });
+      logger.info('Prisma dev migration applied');
+    } catch (devErr) {
+      // Log but don't crash — DB might already be current
+      logger.warn({ devErr }, 'Prisma migrate dev also failed — proceeding anyway');
+    }
+  }
+}
+
 async function bootstrap(): Promise<void> {
   logger.info({ env: env.NODE_ENV, port: env.PORT }, 'ZK-Auth API Gateway starting…');
+
+  // ── Run migrations before connecting (idempotent) ──────────────────────
+  runMigrations();
 
   // ── Infrastructure ────────────────────────────────────────────────────────
   await connectDatabase();
@@ -28,6 +61,7 @@ async function bootstrap(): Promise<void> {
   // ── ZKP services ──────────────────────────────────────────────────────────
   await zkpService.initialize();
   await disclosureService.initialize();
+  await initVerifyRequestNotifier();
 
   // ── Application ───────────────────────────────────────────────────────────
   const app = createApp();
@@ -53,6 +87,7 @@ async function bootstrap(): Promise<void> {
 
     server.close(async () => {
       try {
+        await shutdownVerifyRequestNotifier();
         await disconnectGrpc();
         await disconnectTelemetryDB();
         await disconnectRedis();

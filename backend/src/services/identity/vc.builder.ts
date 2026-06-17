@@ -44,6 +44,7 @@
  */
 
 import { generateId }           from '../../utils/crypto.js';
+import crypto                   from 'crypto';
 import { sha256 }               from '../../utils/crypto.js';
 import {
   VC_CONTEXT_V2,
@@ -108,18 +109,47 @@ export class VCBuilder {
       salts,
     };
 
-    // Mock issuer proof — in production this would be a real Ed25519 or BBS+ signature
+    // Real Ed25519 signature — signs the canonical credential content.
+    // If the institute has a private key in env (set after platform registration),
+    // use it. Otherwise fall back to a deterministic SHA-256 stub.
+    const canonicalData = JSON.stringify({
+      credentialId,
+      issuerDid,
+      holderDid,
+      merkleRoot,
+      credentialType,
+      issuedAt: issuedAt.toISOString(),
+    });
+
+    let proofValue: string;
+    const privateKeyHex = process.env['ISSUER_PRIVATE_KEY_HEX'];
+
+    if (privateKeyHex && privateKeyHex.length === 64) {
+      // Real Ed25519 signing using Node.js crypto
+      const privateKeyBytes  = Buffer.from(privateKeyHex, 'hex');
+      const privateKeyObj    = crypto.createPrivateKey({
+        key: Buffer.concat([
+          Buffer.from('302e020100300506032b657004220420', 'hex'), // PKCS8 header for Ed25519
+          privateKeyBytes,
+        ]),
+        format: 'der',
+        type:   'pkcs8',
+      });
+      const signature  = crypto.sign(null, Buffer.from(canonicalData), privateKeyObj);
+      proofValue       = 'z' + signature.toString('base64url');
+    } else {
+      // Fallback: deterministic SHA-256 stub (consistent between sign + verify)
+      proofValue = 'z' + Buffer.from(
+        sha256(canonicalData), 'hex',
+      ).toString('base64url');
+    }
+
     const proof: VCProof = {
       type:               'DataIntegrityProof',
       created:            issuedAt.toISOString(),
       verificationMethod: `${issuerDid}#key-1`,
       proofPurpose:       'assertionMethod',
-      // In production: proofValue = base64url(Ed25519Sign(canonicalized_vc))
-      // For Phase 9 mock: sha256 of credential content
-      proofValue:         'z' + Buffer.from(
-        sha256(JSON.stringify({ credentialId, merkleRoot, holderDid })),
-        'hex',
-      ).toString('base64url'),
+      proofValue,
     };
 
     const vc: VerifiableCredential = {

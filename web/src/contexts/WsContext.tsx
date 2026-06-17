@@ -1,18 +1,3 @@
-/**
- * WebSocket Context — shared WS connection + message subscription
- *
- * Provides a single authenticated WebSocket connection to all components.
- * Components subscribe to specific message types via useWsSubscribe().
- *
- * Connection lifecycle:
- *   1. WsProvider mounts → connects when access token is available.
- *   2. Reconnects with exponential backoff on unexpected disconnect.
- *   3. Disconnects cleanly on logout (token cleared).
- *
- * The token is passed as a query parameter because the WebSocket upgrade
- * handshake does not support Authorization headers in browsers.
- */
-
 'use client';
 
 import React, {
@@ -29,33 +14,36 @@ import type { WsMessage, WsMessageType } from '@zk-auth/types';
 const WS_BASE =
   process.env['NEXT_PUBLIC_WS_URL'] ?? 'ws://localhost:3001/api/v1/session/telemetry';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
 type MessageHandler = (payload: unknown) => void;
 
 interface WsContextValue {
   connected: boolean;
-  send: (msg: WsMessage) => void;
+  send:      (msg: WsMessage) => void;
   subscribe: (type: WsMessageType, handler: MessageHandler) => () => void;
+  reconnect: () => void;
 }
-
-// ─── Context ──────────────────────────────────────────────────────────────────
 
 const WsContext = createContext<WsContextValue | null>(null);
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
-
 export function WsProvider({ children }: { children: React.ReactNode }) {
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected]   = useState(false);
   const wsRef         = useRef<WebSocket | null>(null);
   const retryCount    = useRef(0);
   const retryTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tokenPollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
   const subscribers   = useRef(new Map<WsMessageType, Set<MessageHandler>>());
   const mountedRef    = useRef(true);
+  const connectingRef = useRef(false);
 
   const connect = useCallback(() => {
+    // Already open or connecting — skip
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (connectingRef.current) return;
+
     const token = getAccessToken();
-    if (!token) return;
+    if (!token) return;   // no token yet — token poller will retry
+
+    connectingRef.current = true;
 
     const url = `${WS_BASE}?token=${encodeURIComponent(token)}`;
     const ws  = new WebSocket(url);
@@ -63,8 +51,14 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
 
     ws.onopen = () => {
       if (!mountedRef.current) { ws.close(); return; }
+      connectingRef.current = false;
       setConnected(true);
       retryCount.current = 0;
+      // Stop token polling — we're connected
+      if (tokenPollRef.current) {
+        clearInterval(tokenPollRef.current);
+        tokenPollRef.current = null;
+      }
     };
 
     ws.onmessage = (e: MessageEvent<string>) => {
@@ -72,32 +66,51 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
         const msg = JSON.parse(e.data) as WsMessage;
         const handlers = subscribers.current.get(msg.type);
         handlers?.forEach((h) => h(msg.payload));
-      } catch {
-        // Ignore malformed frames
-      }
+      } catch { /* ignore malformed frames */ }
     };
 
     ws.onclose = () => {
       if (!mountedRef.current) return;
+      connectingRef.current = false;
       setConnected(false);
       wsRef.current = null;
+      // Exponential backoff retry
       const delay = Math.min(1_000 * 2 ** retryCount.current, 30_000);
       retryCount.current++;
       retryTimer.current = setTimeout(connect, delay);
     };
 
-    ws.onerror = () => { ws.close(); };
+    ws.onerror = () => {
+      connectingRef.current = false;
+      ws.close();
+    };
   }, []);
+
+  // Poll for token every 500ms until we get one, then connect
+  const startTokenPoll = useCallback(() => {
+    if (tokenPollRef.current) return; // already polling
+    tokenPollRef.current = setInterval(() => {
+      const token = getAccessToken();
+      if (token) connect();
+    }, 500);
+  }, [connect]);
 
   useEffect(() => {
     mountedRef.current = true;
+
+    // Try immediately — works if token already in sessionStorage
     connect();
+
+    // If no token yet, start polling
+    if (!getAccessToken()) startTokenPoll();
+
     return () => {
       mountedRef.current = false;
-      if (retryTimer.current) clearTimeout(retryTimer.current);
+      if (retryTimer.current)  clearTimeout(retryTimer.current);
+      if (tokenPollRef.current) clearInterval(tokenPollRef.current);
       wsRef.current?.close();
     };
-  }, [connect]);
+  }, [connect, startTokenPoll]);
 
   const send = useCallback((msg: WsMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -116,14 +129,21 @@ export function WsProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // Manual reconnect — call this after login
+  const reconnect = useCallback(() => {
+    if (retryTimer.current) clearTimeout(retryTimer.current);
+    retryCount.current = 0;
+    wsRef.current?.close();
+    connect();
+    if (!getAccessToken()) startTokenPoll();
+  }, [connect, startTokenPoll]);
+
   return (
-    <WsContext.Provider value={{ connected, send, subscribe }}>
+    <WsContext.Provider value={{ connected, send, subscribe, reconnect }}>
       {children}
     </WsContext.Provider>
   );
 }
-
-// ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useWs(): WsContextValue {
   const ctx = useContext(WsContext);

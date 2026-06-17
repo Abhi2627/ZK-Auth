@@ -259,7 +259,20 @@ export async function getIssuanceHistory(
     ]);
 
     res.status(200).json({
-      records: records.map((r) => ({
+      credentials: records.map((r) => ({
+        credential_id:   r.credentialId,
+        credential_type: r.credentialType,
+        circuit_id:      'merkle_disclosure_v1',
+        merkle_root:     r.merkleRoot,
+        attribute_count: Array.isArray(r.attributeSchema) ? r.attributeSchema.length : 0,
+        status:          'ACTIVE',
+        issued_at:       r.issuedAt.toISOString(),
+        expires_at:      r.expiresAt?.toISOString() ?? null,
+        attributes:      Array.isArray(r.attributeSchema)
+          ? (r.attributeSchema as string[]).map((name, idx) => ({ name, leaf_index: idx }))
+          : [],
+      })),
+      records: records.map((r) => ({  // keep backward compat
         id:               r.id,
         credential_id:    r.credentialId,
         credential_type:  r.credentialType,

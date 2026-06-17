@@ -22,5 +22,6 @@ verifyRequestRouter.get('/pending',        authMiddleware, getPendingRequests);
 verifyRequestRouter.post('/:id/approve',   authMiddleware, postApproveRequest);
 verifyRequestRouter.post('/:id/reject',    authMiddleware, postRejectRequest);
 
-// Issuance history for authenticated user
-issuanceRouter.get('/history',             authMiddleware, getIssuanceHistory);
+// Issuance history for authenticated user — two aliases
+issuanceRouter.get('/history', authMiddleware, getIssuanceHistory);
+issuanceRouter.get('/my',      authMiddleware, getIssuanceHistory); // alias for CredentialWallet

@@ -1,22 +1,22 @@
 /**
- * Issuer Demo Portal — MANIT University Admin Dashboard
+ * Issuer Portal — Dynamic multi-institute credential issuance
  *
- * Demonstrates the Issuer actor in the three-actor ZK ecosystem.
- * Non-cryptographer friendly: visually shows raw PII → Poseidon hashing →
- * Merkle tree construction → W3C VC output at each step.
+ * Reads institute identity from sessionStorage after /issuer-login.
+ * Works for any institute registered on the ZK-Auth platform:
+ *   - MANIT Bhopal issues AcademicDegree credentials
+ *   - Apollo issues MedicalRecord credentials
+ *   - SBI issues BankStatement credentials
+ *   etc.
  *
- * Flow:
- *   1. Admin fills student details form
- *   2. Click "Issue M.Tech ZK-Credential"
- *   3. Animated pipeline: Raw PII → Attribute Encoding → Poseidon Hashing
- *      → Merkle Tree Build → W3C VC Envelope → QR Code
- *   4. QR displayed — student scans into wallet
+ * The portal adapts its UI (title, credential types, attribute fields)
+ * based on the institute_type stored at login time.
  */
 
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence }       from 'framer-motion';
+import { useRouter }                     from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,6 +63,18 @@ interface HistoryRecord {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
+
+// Credential type configs per institute type
+const INSTITUTE_CREDENTIAL_LABELS: Record<string, { ctaLabel: string; holderLabel: string; icon: string }> = {
+  'University / College': { ctaLabel: 'Issue Academic ZK-Credential', holderLabel: 'Student / Researcher', icon: '🎓' },
+  'School / Board':       { ctaLabel: 'Issue School ZK-Certificate',  holderLabel: 'Student',              icon: '📚' },
+  'Bank / NBFC':          { ctaLabel: 'Issue Bank ZK-Statement',       holderLabel: 'Account Holder',       icon: '🏦' },
+  'Hospital / Healthcare':{ ctaLabel: 'Issue Medical ZK-Certificate',  holderLabel: 'Patient',              icon: '🏥' },
+  'Government Agency':    { ctaLabel: 'Issue Govt ZK-Document',        holderLabel: 'Citizen',              icon: '🏛️' },
+  'Corporate HR':         { ctaLabel: 'Issue Employment ZK-Record',    holderLabel: 'Employee',             icon: '💼' },
+  'Professional Body':    { ctaLabel: 'Issue Professional ZK-License', holderLabel: 'Member',               icon: '📋' },
+  'default':              { ctaLabel: 'Issue ZK-Credential',           holderLabel: 'Recipient',            icon: '🔐' },
+};
 
 const PIPELINE_STEPS: { key: PipelineStep; label: string; icon: string }[] = [
   { key: 'encoding',      label: 'Encoding Attributes',        icon: '🔢' },
@@ -160,6 +172,34 @@ function MerkleTreeVisual({ leaves, root }: { leaves: AttributeRow[]; root: stri
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function IssuerDemoPage() {
+  const router = useRouter();
+
+  // Institute identity — loaded from sessionStorage after /issuer-login
+  const [instituteName, setInstituteName] = useState('Your Institute');
+  const [instituteType, setInstituteType] = useState('default');
+  const [instituteDid,  setInstituteDid]  = useState('');
+
+  // Auth guard: redirect to /issuer-login if no valid token
+  useEffect(() => {
+    const token = sessionStorage.getItem('issuer_token');
+    if (!token) { router.replace('/issuer-login'); return; }
+    // Load platform registration data if present (set after platform onboarding)
+    const regData = sessionStorage.getItem('institute_registration');
+    if (regData) {
+      try {
+        const parsed = JSON.parse(regData) as {
+          name?: string; type?: string; did?: string;
+        };
+        if (parsed.name) setInstituteName(parsed.name);
+        if (parsed.type) setInstituteType(parsed.type);
+        if (parsed.did)  setInstituteDid(parsed.did);
+      } catch { /* ignore malformed data */ }
+    }
+  }, [router]);
+
+  const credConfig = INSTITUTE_CREDENTIAL_LABELS[instituteType]
+    ?? INSTITUTE_CREDENTIAL_LABELS['default']!;
+
   const [form, setForm] = useState({
     full_name:      '',
     date_of_birth:  '',
@@ -243,7 +283,10 @@ export default function IssuerDemoPage() {
 
       const resp = await fetch(`${API_BASE}/api/issuer/issue-id`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Issuer-Token': sessionStorage.getItem('issuer_token') ?? '',
+        },
         body: JSON.stringify({
           holder_did:     mockDid,
           full_name:      form.full_name,
@@ -290,13 +333,30 @@ export default function IssuerDemoPage() {
       <header style={s.header}>
         <div style={s.headerInner}>
           <div style={s.logoRow}>
-            <span style={s.logoIcon}>🎓</span>
+            <span style={s.logoIcon}>{credConfig.icon}</span>
             <div>
-              <h1 style={s.logoTitle}>MANIT Bhopal</h1>
-              <p style={s.logoSubtitle}>Maulana Azad National Institute of Technology</p>
+              <h1 style={s.logoTitle}>{instituteName}</h1>
+              <p style={s.logoSubtitle}>
+                ZK-Auth Credential Issuer
+                {instituteDid && (
+                  <> &middot; <code style={{ fontSize: 10, color: '#484f58' }}>{instituteDid}</code></>
+                )}
+              </p>
             </div>
           </div>
-          <span style={s.headerBadge}>ZK-Auth Credential Issuer Node</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={s.headerBadge}>ZK-Auth Issuer Node</span>
+            <button
+              style={{ background: 'none', border: '1px solid #30363d', color: '#8b949e',
+                borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer' }}
+              onClick={() => {
+                sessionStorage.removeItem('issuer_token');
+                router.push('/issuer-login');
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -414,7 +474,7 @@ export default function IssuerDemoPage() {
 
           {/* ── Left: Form ── */}
           <section style={s.formCard}>
-            <h2 style={s.sectionTitle}>Issue M.Tech ZK-Credential</h2>
+            <h2 style={s.sectionTitle}>Issue {credConfig.holderLabel} ZK-Credential</h2>
             <p style={s.sectionSubtitle}>
               Student PII is <strong>never stored</strong> — only Poseidon
               cryptographic commitments are persisted.
@@ -465,7 +525,7 @@ export default function IssuerDemoPage() {
               onClick={handleIssue}
               disabled={isPipelineActive}
             >
-              {isPipelineActive ? '⚙️  Processing…' : '🔐  Issue M.Tech ZK-Credential'}
+              {isPipelineActive ? '⚙️  Processing…' : `🔐  ${credConfig.ctaLabel}`}
             </button>
 
             {/* Pipeline progress */}

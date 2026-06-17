@@ -17,6 +17,7 @@ import { sessionRouter }       from './routes/session.routes.js';
 import { issuerRouter }        from './routes/issuer.routes.js';
 import { verifierRouter }      from './routes/verifier.routes.js';
 import { verifyRequestRouter, issuanceRouter } from './routes/verifyRequest.routes.js';
+import { platformRouter }      from './routes/platform.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -79,8 +80,11 @@ export function createApp(): Express {
   app.use('/api/v1/session',    sessionRouter);
 
   // Phase 9: Three-Actor Ecosystem
-  app.use('/api/issuer',   issuerRouter);
-  app.use('/api/verifier', verifierRouter);
+  app.use('/api/issuer',    issuerRouter);
+  app.use('/api/verifier',  verifierRouter);
+
+  // Platform: Institute onboarding
+  app.use('/api/platform',  platformRouter);
 
   // Phase 11: Remote verification requests + issuance history
   app.use('/api/v1/verify-request', verifyRequestRouter);

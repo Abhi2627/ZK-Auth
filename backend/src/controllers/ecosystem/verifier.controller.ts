@@ -38,6 +38,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { z }                           from 'zod';
+import crypto                          from 'crypto';
 import { prisma }                      from '../../config/database.js';
 import { redis }                       from '../../config/redis.js';
 import { didRegistry }                 from '../../services/identity/did.registry.js';
@@ -73,9 +74,8 @@ function proofRequestKey(requestId: string): string {
 // ─── Input validation ─────────────────────────────────────────────────────────
 
 const requestProofSchema = z.object({
-  /** Type of credential needed (e.g. 'GovernmentID') */
   credential_type: z.string().min(1).max(64),
-  /** The predicate the verifier wants to verify */
+  verifier_did:    z.string().min(7).max(256).optional(), // from logged-in verifier
   claims: z.array(
     z.object({
       attribute_name:    z.string().min(1).max(64),
@@ -108,6 +108,14 @@ export async function postRequestProof(
     }
     const body = parsed.data;
 
+    // Use the verifier DID from the authenticated request, or fall back to default
+    const verifierDid  = body.verifier_did ?? BANK_VERIFIER_DID;
+    const verifierName = verifierDid === BANK_VERIFIER_DID
+      ? 'ZK-Auth Mock Bank'
+      : verifierDid.replace('did:web:', '').replace('.zk-auth.io', '').replace(/-/g, ' ')
+          .replace(/\b\w/g, (c: string) => c.toUpperCase());
+    const serviceEndpoint = `https://${verifierDid.replace('did:web:', '')}/api/verifier/verify`;
+
     // Build typed RequestedClaim array
     const requestedClaims: RequestedClaim[] = body.claims.map((c): RequestedClaim => ({
       attributeName:    c.attribute_name,
@@ -118,14 +126,14 @@ export async function postRequestProof(
       privacyStatement: c.privacy_statement,
     }));
 
-    // Build ProofRequest via VC builder
+    // Build ProofRequest via VC builder — use the requesting verifier's DID
     const proofRequest: ProofRequest = vcBuilder.buildProofRequest({
-      verifierDid:     BANK_VERIFIER_DID,
-      verifierName:    'ZK-Auth Mock Bank',
-      serviceEndpoint: BANK_SERVICE_ENDPOINT,
-      claims:          requestedClaims,
-      purpose:         body.purpose,
-      ttlSeconds:      PROOF_REQUEST_TTL_S,
+      verifierDid,
+      verifierName,
+      serviceEndpoint,
+      claims:      requestedClaims,
+      purpose:     body.purpose,
+      ttlSeconds:  PROOF_REQUEST_TTL_S,
     });
 
     // Store in Redis for challenge validation (TTL = PROOF_REQUEST_TTL_S)
@@ -136,7 +144,7 @@ export async function postRequestProof(
     );
 
     logger.info(
-      { requestId: proofRequest.id, verifierDid: BANK_VERIFIER_DID },
+      { requestId: proofRequest.id, verifierDid },
       'Proof request issued',
     );
 
@@ -195,6 +203,8 @@ export async function postVerifyPresentation(
       );
     }
     const storedRequest = JSON.parse(storedRaw) as ProofRequest;
+    // Extract the verifier DID that was set when the proof request was created
+    const activeVerifierDid = storedRequest.verifier?.did ?? BANK_VERIFIER_DID;
 
     if (
       zkDisclosure.verifierChallenge &&
@@ -245,20 +255,52 @@ export async function postVerifyPresentation(
       'Issuer DID resolved for VP verification',
     );
 
-    // ── Step 5: Verify the VC proof (mock: re-derive sha256 hash) ─────────
-    // Production: verify Ed25519 or BBS+ signature using verificationMethod.publicKeyJwk
+    // ── Step 5: Verify the VC proof ───────────────────────────────────────
+    // Real path: Ed25519 verify using issuer's public key from DID document.
+    // Fallback: SHA-256 re-derivation (matches vc.builder.ts fallback).
     const vcProof = Array.isArray(embeddedVC.proof) ? embeddedVC.proof[0] : embeddedVC.proof;
     if (vcProof) {
-      const expectedHash = 'z' + Buffer.from(
-        sha256(JSON.stringify({
-          credentialId: zkDisclosure.credentialId,
-          merkleRoot:   (embeddedVC.zkCommitment?.merkleRoot ?? ''),
-          holderDid:    vp.holder ?? '',
-        })),
-        'hex',
-      ).toString('base64url');
+      const canonicalData = JSON.stringify({
+        credentialId: zkDisclosure.credentialId,
+        issuerDid,
+        holderDid:    vp.holder ?? '',
+        merkleRoot:   (embeddedVC.zkCommitment?.merkleRoot ?? ''),
+        credentialType: Array.isArray(embeddedVC.type)
+          ? embeddedVC.type.find((t: string) => t !== 'VerifiableCredential' && t !== 'ZkAuthMerkleCredential') ?? ''
+          : '',
+        issuedAt: embeddedVC.issuanceDate ?? '',
+      });
 
-      if (vcProof.proofValue !== expectedHash) {
+      const pubKeyMultibase = (verificationMethod as { publicKeyMultibase?: string }).publicKeyMultibase;
+      let proofValid = false;
+
+      if (pubKeyMultibase?.startsWith('z')) {
+        try {
+          const pubKeyBytes = Buffer.from(pubKeyMultibase.slice(1), 'base64url');
+          const pubKeyObj   = crypto.createPublicKey({
+            key: Buffer.concat([
+              Buffer.from('302a300506032b6570032100', 'hex'),
+              pubKeyBytes,
+            ]),
+            format: 'der',
+            type:   'spki',
+          });
+          const sigBytes = Buffer.from(
+            (vcProof.proofValue as string).startsWith('z')
+              ? (vcProof.proofValue as string).slice(1)
+              : (vcProof.proofValue as string),
+            'base64url',
+          );
+          proofValid = crypto.verify(null, Buffer.from(canonicalData), pubKeyObj, sigBytes);
+        } catch { /* fall through */ }
+      }
+
+      if (!proofValid) {
+        const expectedHash = 'z' + Buffer.from(sha256(canonicalData), 'hex').toString('base64url');
+        proofValid = vcProof.proofValue === expectedHash;
+      }
+
+      if (!proofValid) {
         logger.warn({ credentialId: zkDisclosure.credentialId }, 'VC proof signature invalid');
         throw new AppError(ErrorCode.INVALID_CLAIM_PROOF, 'VC issuer proof is invalid', 400);
       }
@@ -270,10 +312,29 @@ export async function postVerifyPresentation(
       publicSignals: zkDisclosure.publicSignals as [string, string, string],
       credentialId:  zkDisclosure.credentialId,
       claimedPredicate: zkDisclosure.claimedPredicate,
-      verifierId:    BANK_VERIFIER_DID,
+      verifierId:    activeVerifierDid,
     });
 
-    // ── Step 7: Consume the proof request (one-time use) ──────────────────
+    // ── Step 7: Look up issuance record for display metadata (no PII) ──────────
+    let issuanceMeta: Record<string, unknown> = {};
+    try {
+      const record = await prisma.issuanceRecord.findFirst({
+        where: { credentialId: zkDisclosure.credentialId },
+      });
+      if (record) {
+        issuanceMeta = {
+          document_type:    record.credentialType,
+          issued_at:        record.issuedAt.toISOString(),
+          expires_at:       record.expiresAt?.toISOString() ?? null,
+          issuer_did:       record.issuerDid,
+          holder_did:       record.holderDid,
+          attribute_schema: record.attributeSchema, // field NAMES only — no values
+          merkle_root:      record.merkleRoot.substring(0, 16) + '…',
+        };
+      }
+    } catch { /* non-fatal */ }
+
+    // ── Step 8: Consume the proof request (one-time use) ──────────────────
     await redis.del(proofRequestKey(request_id));
 
     logger.info(
@@ -281,7 +342,7 @@ export async function postVerifyPresentation(
         requestId:     request_id,
         credentialId:  zkDisclosure.credentialId,
         predicate:     zkDisclosure.claimedPredicate,
-        verifierDid:   BANK_VERIFIER_DID,
+        verifierDid:   activeVerifierDid,
         holderDid:     vp.holder,
         issuerDid,
       },
@@ -293,11 +354,8 @@ export async function postVerifyPresentation(
       claimed_predicate: disclosureResult.claimedPredicate,
       verified_at:       disclosureResult.verifiedAt.toISOString(),
       issuer_did:        issuerDid,
-      verifier_did:      BANK_VERIFIER_DID,
-      /**
-       * Privacy: the verifier receives ONLY the boolean grant decision.
-       * No attribute values, no salts, no raw signals are included.
-       */
+      verifier_did:      activeVerifierDid,
+      document:          issuanceMeta,
       privacy_notice: 'Verification result only — no PII was shared.',
     });
   } catch (err) {
