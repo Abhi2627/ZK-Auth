@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZK-Auth Browser Benchmark</title>
+  <style>
+    body { font-family: monospace; max-width: 820px; margin: 40px auto; padding: 0 20px; background: #0f0f0f; color: #e0e0e0; }
+    h1   { color: #7dd3fc; border-bottom: 1px solid #333; padding-bottom: 8px; }
+    h2   { color: #a5f3a0; margin-top: 28px; }
+    .btn { background: #1d4ed8; color: #fff; border: none; padding: 10px 24px;
+           font-size: 15px; font-family: monospace; cursor: pointer; border-radius: 4px; margin: 4px; }
+    .btn:disabled { background: #374151; color: #6b7280; cursor: default; }
+    .btn:hover:not(:disabled) { background: #2563eb; }
+    #log { background: #111; border: 1px solid #333; padding: 14px; margin-top: 16px;
+           height: 260px; overflow-y: auto; font-size: 12px; line-height: 1.6; white-space: pre; }
+    #results { background: #111; border: 1px solid #22c55e; padding: 14px; margin-top: 16px;
+               display: none; font-size: 13px; line-height: 1.8; }
+    .hi  { color: #7dd3fc; }
+    .ok  { color: #4ade80; }
+    .warn{ color: #fbbf24; }
+    .err { color: #f87171; }
+    .dim { color: #6b7280; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th,td { text-align: right; padding: 4px 12px; border-bottom: 1px solid #222; }
+    th    { color: #7dd3fc; text-align: right; }
+    td:first-child, th:first-child { text-align: left; }
+  </style>
+</head>
+<body>
+<h1>ZK-Auth Browser Benchmark</h1>
+<p class="dim">Measures real Groth16 proof generation time in <strong>this browser</strong>
+using snarkjs + WebAssembly. Results go into Table I (Disclosure/Auth rows) of the paper.</p>
+
+<div>
+  <button class="btn" id="btnWarm" onclick="runBenchmark(5, true)">Warm-up (5 trials)</button>
+  <button class="btn" id="btnRun"  onclick="runBenchmark(30, false)">Run benchmark (30 trials)</button>
+  <button class="btn" id="btnCopy" onclick="copyResults()" style="display:none">Copy JSON results</button>
+</div>
+
+<div id="log">Ready. Press "Run benchmark" to start.
+Environment: <span id="envinfo"></span>
+</div>
+
+<div id="results"></div>
+
+<!-- snarkjs served from same origin (CSP/ad-blocker safe) -->
+<script src="/vendor/snarkjs.min.js"></script>
+<script>
+// ── Environment info ────────────────────────────────────────────────────────
+const env = document.getElementById('envinfo');
+env.textContent = `${navigator.userAgent.substring(0,80)}`;
+
+// ── Logging ─────────────────────────────────────────────────────────────────
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+  const span = document.createElement('span');
+  if (cls) span.className = cls;
+  span.textContent = msg + '\n';
+  logEl.appendChild(span);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+const BN254_P = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
+function hexToField(hex) {
+  const v = BigInt('0x' + hex.replace(/^0x/,''));
+  return ((v % BN254_P) + BN254_P) % BN254_P;
+}
+
+function nowMs() { return performance.now(); }
+
+function stats(arr) {
+  if (!arr.length) return {};
+  const s = [...arr].sort((a,b)=>a-b);
+  const n = s.length;
+  const mean = s.reduce((a,b)=>a+b,0)/n;
+  const variance = s.reduce((a,b)=>a+(b-mean)**2,0)/n;
+  const pct = p => s[Math.min(n-1, Math.floor(p/100*n))];
+  const r = x => Math.round(x*1000)/1000;
+  return { n, mean:r(mean), median:r(pct(50)), stddev:r(Math.sqrt(variance)),
+           min:r(s[0]), max:r(s[n-1]), p95:r(pct(95)), p99:r(pct(99)) };
+}
+
+// ── Build a Web Worker (same approach as production prover.ts) ──────────────
+function buildWorker() {
+  const snarkjsUrl = new URL('/vendor/snarkjs.min.js', window.location.origin).toString();
+  const src = `
+importScripts('${snarkjsUrl}');
+self.onmessage = async function(e) {
+  const { witnessInput, wasmPath, zkeyPath, id } = e.data;
+  const t0 = performance.now();
+  try {
+    const { proof, publicSignals } = await snarkjs.groth16.fullProve(witnessInput, wasmPath, zkeyPath);
+    const ms = performance.now() - t0;
+    self.postMessage({ id, proof, publicSignals, ms, error: null });
+  } catch(err) {
+    self.postMessage({ id, proof: null, publicSignals: null, ms: null, error: err.message });
+  }
+};`;
+  const blob = new Blob([src], { type: 'application/javascript' });
+  return new Worker(URL.createObjectURL(blob));
+}
+
+function proveInWorker(worker, witnessInput) {
+  return new Promise((resolve, reject) => {
+    const id = Math.random().toString(36).slice(2);
+    const wasmUrl = new URL('/circuits/auth/auth.wasm', window.location.origin).toString();
+    const zkeyUrl = new URL('/circuits/auth/auth.zkey', window.location.origin).toString();
+
+    const timer = setTimeout(() => {
+      reject(new Error('Proof timed out (60s)'));
+    }, 60000);
+
+    worker.onmessage = e => {
+      if (e.data.id !== id) return;
+      clearTimeout(timer);
+      if (e.data.error) { reject(new Error(e.data.error)); return; }
+      resolve({ proof: e.data.proof, publicSignals: e.data.publicSignals, workerMs: e.data.ms });
+    };
+    worker.onerror = e => { clearTimeout(timer); reject(new Error(e.message)); };
+    worker.postMessage({ witnessInput, wasmUrl, zkeyUrl, id });
+  });
+}
+
+// ── Main benchmark ─────────────────────────────────────────────────────────
+let lastResultJson = null;
+
+async function runBenchmark(trials, warmup) {
+  document.getElementById('btnWarm').disabled = true;
+  document.getElementById('btnRun').disabled  = true;
+  document.getElementById('btnCopy').style.display = 'none';
+  logEl.textContent = '';
+
+  log(`ZK-Auth Browser Benchmark — ${warmup ? 'WARM-UP' : 'MAIN RUN'} (${trials} trials)`, 'hi');
+  log(`Browser: ${navigator.userAgent.substring(0,100)}`, 'dim');
+  log(`WASM:    /circuits/auth/auth.wasm`,'dim');
+  log(`zkey:    /circuits/auth/auth.zkey`,'dim');
+  log('');
+
+  // Fixed secret for the session (same pattern as Node.js benchmark)
+  const secretHex = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b=>b.toString(16).padStart(2,'0')).join('');
+  const secretField = hexToField(secretHex).toString();
+
+  log('Building Web Worker...', 'dim');
+  const worker = buildWorker();
+  log('Worker ready.', 'ok');
+
+  // Preload artifacts into browser cache
+  log('Preloading circuit artifacts...', 'dim');
+  const tPreload0 = nowMs();
+  await Promise.all([
+    fetch('/circuits/auth/auth.wasm', { cache: 'force-cache' }),
+    fetch('/circuits/auth/auth.zkey',  { cache: 'force-cache' }),
+  ]);
+  const preloadMs = Math.round(nowMs() - tPreload0);
+  log(`Artifacts preloaded in ${preloadMs}ms.`, 'ok');
+  log('');
+  log('trial | wallMs(outer) | workerMs(inner) | status');
+  log('------+---------------+-----------------+-------');
+
+  const rows = [];
+
+  for (let i = 0; i < trials; i++) {
+    // Fresh random nonce each trial (mirrors real auth flow)
+    const nonceBytes = crypto.getRandomValues(new Uint8Array(32));
+    const nonceHex   = Array.from(nonceBytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const nonceField = hexToField(nonceHex).toString();
+
+    const witnessInput = { secret: secretField, nonce: nonceField };
+
+    const t0 = nowMs();
+    let workerMs = null;
+    let status = 'ok';
+    try {
+      const res = await proveInWorker(worker, witnessInput);
+      workerMs = res.workerMs;
+    } catch(err) {
+      status = `ERR: ${err.message.substring(0,40)}`;
+    }
+    const wallMs = Math.round((nowMs() - t0) * 1000) / 1000;
+    if (workerMs !== null) workerMs = Math.round(workerMs * 1000) / 1000;
+
+    rows.push({ trial: i+1, wallMs, workerMs, status });
+    const trialNum = String(i+1).padStart(5);
+    const wallStr  = wallMs !== null  ? String(wallMs).padStart(13)  : '          ERR';
+    const wkStr    = workerMs !== null? String(workerMs).padStart(15): '            -';
+    log(`${trialNum} | ${wallStr} | ${wkStr} | ${status}`, status === 'ok' ? '' : 'err');
+
+    // Yield to browser between trials
+    await new Promise(r => setTimeout(r, 10));
+  }
+
+  worker.terminate();
+
+  const successRows = rows.filter(r => r.status === 'ok');
+  const wallStats   = stats(successRows.map(r => r.wallMs));
+  const workerStats = stats(successRows.map(r => r.workerMs));
+
+  log('');
+  log(`SUCCESS: ${successRows.length}/${trials}`, 'ok');
+  log('');
+  log(`Wall-clock (outer, includes message-passing overhead):`, 'hi');
+  log(`  median=${wallStats.median}ms  p95=${wallStats.p95}ms  std=${wallStats.stddev}ms  min=${wallStats.min}ms  max=${wallStats.max}ms`);
+  log(`Worker-internal (pure snarkjs.groth16.fullProve() time):`, 'hi');
+  log(`  median=${workerStats.median}ms  p95=${workerStats.p95}ms  std=${workerStats.stddev}ms  min=${workerStats.min}ms  max=${workerStats.max}ms`);
+
+  if (!warmup) {
+    const result = {
+      benchmarkType: 'browser-wasm-groth16',
+      generatedAt: new Date().toISOString(),
+      browser: navigator.userAgent,
+      platform: navigator.platform,
+      trials,
+      successCount: successRows.length,
+      circuitArtifacts: { wasm: '/circuits/auth/auth.wasm', zkey: '/circuits/auth/auth.zkey' },
+      artifactPreloadMs: preloadMs,
+      proveTimeWall_ms: wallStats,
+      proveTimeWorkerInternal_ms: workerStats,
+      methodologyNote: [
+        'wallMs = performance.now() measured on the main thread, wrapping the full Worker round trip including postMessage serialisation.',
+        'workerMs = performance.now() measured INSIDE the Worker, covering only snarkjs.groth16.fullProve() itself.',
+        'workerMs is the number comparable to the Node.js groth16ProveLocal measurement.',
+        'wallMs > workerMs by the Worker message-passing overhead (~1-5ms typically).',
+        'Artifacts were preloaded into browser cache before trials; first-load network latency is excluded.',
+        'Trial 1 may be higher due to WASM JIT compilation; it is included in the dataset for transparency.',
+      ],
+      rawTrials: rows,
+    };
+    lastResultJson = JSON.stringify(result, null, 2);
+    document.getElementById('btnCopy').style.display = 'inline-block';
+
+    // Show results box
+    const resEl = document.getElementById('results');
+    resEl.style.display = 'block';
+    resEl.innerHTML = `
+<h2>Results — paste into paper (Table I, Browser row)</h2>
+<table>
+  <tr><th>Metric</th><th>Min (ms)</th><th>Median (ms)</th><th>p95 (ms)</th><th>Std (ms)</th></tr>
+  <tr><td>Browser WASM prove (wall)</td><td>${wallStats.min}</td><td><strong>${wallStats.median}</strong></td><td>${wallStats.p95}</td><td>${wallStats.stddev}</td></tr>
+  <tr><td>Browser WASM prove (worker-internal)</td><td>${workerStats.min}</td><td><strong>${workerStats.median}</strong></td><td>${workerStats.p95}</td><td>${workerStats.stddev}</td></tr>
+</table>
+<p class="dim" style="margin-top:8px;font-size:11px">
+  <strong>worker-internal</strong> = directly comparable to the Node.js benchmark (62ms median on M4).<br>
+  <strong>wall</strong> = what the user actually waits for (slightly higher due to message-passing).
+</p>`;
+
+    log('');
+    log('>>> Results ready. Copy the JSON with the button above and send to Abhay. <<<', 'ok');
+  }
+
+  document.getElementById('btnWarm').disabled = false;
+  document.getElementById('btnRun').disabled  = false;
+}
+
+function copyResults() {
+  if (!lastResultJson) return;
+  navigator.clipboard.writeText(lastResultJson).then(() => {
+    document.getElementById('btnCopy').textContent = 'Copied!';
+    setTimeout(() => document.getElementById('btnCopy').textContent = 'Copy JSON results', 2000);
+  });
+}
+</script>
+</body>
+</html>

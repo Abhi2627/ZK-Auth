@@ -48,7 +48,18 @@ import 'package:webview_flutter/webview_flutter.dart';
 class ProverResult {
   final Map<String, dynamic> proof;
   final List<String> publicSignals;
-  const ProverResult({required this.proof, required this.publicSignals});
+  /// Wall-clock time for the full generateProof() call in milliseconds,
+  /// measured in Dart (includes JS bridge overhead + snarkjs execution).
+  final int? wallMs;
+  /// Time reported by snarkjs itself inside the WebView (pure WASM prove time),
+  /// if the prover.html page reports it. Null if not available.
+  final int? jsInternalMs;
+  const ProverResult({
+    required this.proof,
+    required this.publicSignals,
+    this.wallMs,
+    this.jsInternalMs,
+  });
 }
 
 class ProverException implements Exception {
@@ -165,6 +176,7 @@ class GrothProver {
     }
 
     _proofCompleter = Completer<ProverResult>();
+    final stopwatch = Stopwatch()..start();
 
     final inputJson = jsonEncode({
       'secretField': secretField,
@@ -173,14 +185,17 @@ class GrothProver {
       'zkeyBase64':  _zkeyBase64,
     });
 
-    // runJavaScript (not runJavaScriptReturningResult) since the actual
-    // result arrives asynchronously via ProverChannel.postMessage — proof
-    // generation can take a few seconds and we don't want to block here on
-    // a synchronous JS return value.
     await _controller.runJavaScript('generateProof(${jsonEncode(inputJson)})');
 
     try {
-      return await _proofCompleter!.future.timeout(const Duration(seconds: 60));
+      final result = await _proofCompleter!.future.timeout(const Duration(seconds: 60));
+      stopwatch.stop();
+      return ProverResult(
+        proof: result.proof,
+        publicSignals: result.publicSignals,
+        wallMs: stopwatch.elapsedMilliseconds,
+        jsInternalMs: result.jsInternalMs,
+      );
     } on TimeoutException {
       throw const ProverException(
         'Proof generation timed out after 60s. This usually means '

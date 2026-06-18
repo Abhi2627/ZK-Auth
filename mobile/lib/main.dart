@@ -16,6 +16,7 @@ import 'features/dashboard/home_screen.dart';
 import 'features/vault/vault_screen.dart';
 import 'features/scanner/scanner_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/benchmark/benchmark_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,6 +105,7 @@ class ZkAuthApp extends StatelessWidget {
   GoRouter _buildRouter() => GoRouter(
     initialLocation: '/splash',
     routes: [
+      GoRoute(path: '/benchmark', builder: (_, __) => const BenchmarkScreen()),
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login',  builder: (_, __) => const LoginScreen()),
       // Standalone scanner entry point — deliberately OUTSIDE the
