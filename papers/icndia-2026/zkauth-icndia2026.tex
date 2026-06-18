@@ -920,14 +920,12 @@ v0.0.8 with BN254-optimized constants identical to the circuit. Argon2id
 measurements use production parameters (memoryCost = 65,536\,KiB, timeCost
 = 3, parallelism = 1) from the project's own recovery flow.
 
-\textit{Environment note:} Measurements are from the Node.js/snarkjs
-pipeline. Browser WebAssembly timings will differ by engine and SIMD
-support; browser-specific benchmarks and multi-device cross-platform
-comparison are planned follow-on work.
+\textit{Environment note:} The Node.js benchmark represents server-side
+and headless proving. Browser WASM measurements ($n=30$, Chrome, Web Worker)
+are also reported; mobile WebView results are planned follow-on work.
 
-\textit{LSTM note:} Table~\ref{tab:lstm_perf} entries marked \textbf{[TBD]}
-are pending evaluation on an authentic user behavioral dataset; they do not
-affect the ZKP performance claims reported here.
+\textit{LSTM note:} Table~\ref{tab:lstm_perf} reflects evaluation on the
+Balabit Mouse Dynamics dataset; results are reported in Section~\ref{sec:results}.
 
 \subsection{ZKP Performance}
 
@@ -938,9 +936,9 @@ JIT compilation of the WASM witness calculator and is retained for transparency.
 
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.25}
-\caption{ZKP Authentication Performance ($n=120$, Apple M4, Node.js/snarkjs
-v0.7.4. Server verify includes deliberate 50\,ms timing-attack mitigation
-padding; see Section~\ref{sec:security}.)}
+\caption{ZKP Proof Generation Across Environments (Apple M4, snarkjs v0.7.4).
+Server verify includes 50\,ms T14 pad~\S\ref{sec:security}.
+$^\dagger$Raw local snarkjs; no HTTP/pad. $^\ddagger$Chrome Web Worker internal only.}
 \label{tab:zkp_perf}
 \centering
 \begin{tabular}{lcccc}
@@ -948,17 +946,23 @@ padding; see Section~\ref{sec:security}.)}
 \textbf{Metric} & \textbf{Min} & \textbf{Median} & \textbf{p95} & \textbf{Std} \\
 & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} & \textbf{(ms)} \\
 \midrule
+\multicolumn{5}{l}{\textit{Auth circuit (932 constraints) --- Node.js/snarkjs, $n=120$}} \\
 Challenge fetch     & 2.60  & 4.21  & 4.88  & 0.75  \\
 Poseidon hash       & 0.15  & 0.19  & 0.21  & 0.01  \\
 Groth16 prove       & 59.65 & 61.93 & 65.41 & 11.86 \\
 Server verify       & 53.66 & 65.80 & 75.87 & 15.62 \\
 \midrule
-\textbf{Total E2E}  & 119.33 & \textbf{132.51} & 143.06 & 27.40 \\
+\textbf{Total E2E (Node.js)} & 119.33 & \textbf{132.51} & 143.06 & 27.40 \\
 \midrule
+\multicolumn{5}{l}{\textit{Auth circuit --- Chrome browser, Web Worker, $n=30$}} \\
+Browser prove (wall)            & 163.3 & 166.4 & 170.0 & 6.48 \\
+Browser prove (WASM)$^\ddagger$ & 151.1 & 153.4 & 156.8 & 3.13 \\
+\midrule
+\multicolumn{5}{l}{\textit{Disclosure circuit (depth-8 Merkle + GTE) --- Node.js, $n=30$}} \\
 Disclosure prove    & 167.07 & 172.97 & 180.87 & 24.71 \\
-Disclosure verify$^\dagger$   & 5.31  & 5.86  & 7.72  & 0.72  \\
+Disclosure verify$^\dagger$ & 5.31 & 5.86 & 7.72 & 0.72 \\
 \bottomrule
-\multicolumn{5}{l}{\footnotesize $^\dagger$Raw local snarkjs verification; no HTTP round trip or T14 timing pad.}\\
+\multicolumn{5}{l}{\footnotesize $^\dagger$Raw local verify only. \ $^\ddagger$Worker-internal time only (no message-passing).}\\
 \end{tabular}
 \end{table}
 
@@ -1123,6 +1127,11 @@ Groth16 proof generation via Node.js/snarkjs on Apple M4 is 61.9\,ms median
 (p95: 65.4\,ms), well within acceptable latency for an authentication event.
 The cold-start spike at trial~1 (191\,ms) reflects JIT compilation of the
 WASM witness calculator; subsequent trials stabilize with $\sigma=11.9$\,ms.
+Browser WASM proof generation (Chrome, Web Worker) measures 153.4\,ms median
+--- 2.5$\times$ slower than Node.js on the same M4 machine. This gap is
+attributable to Chrome's renderer-process WASM JIT tier being less aggressive
+than Node.js V8's standalone WASM compiler; the distribution is remarkably
+stable ($\sigma=3.1$\,ms), confirming consistent WASM scheduling.
 Step-up re-authentication overhead is paid only when LSTM anomaly detection
 fires, making the ZKP cost budget independent of session activity in the
 common case.
