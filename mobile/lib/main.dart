@@ -106,6 +106,13 @@ class ZkAuthApp extends StatelessWidget {
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login',  builder: (_, __) => const LoginScreen()),
+      // Standalone scanner entry point — deliberately OUTSIDE the
+      // authenticated ShellRoute below. The scan-and-verify flow only
+      // calls the public /api/verifier/verify-doc/:id endpoint and needs
+      // no logged-in session, no secret on device, and no ZK proof at all.
+      // Reachable directly from the login screen so it works even while
+      // the ZKP login path is still being worked on.
+      GoRoute(path: '/scan', builder: (_, __) => const ScannerScreen()),
       ShellRoute(
         builder: (context, state, child) => HomeShell(child: child),
         routes: [

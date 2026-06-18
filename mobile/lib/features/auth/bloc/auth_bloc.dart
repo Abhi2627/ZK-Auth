@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -10,6 +7,7 @@ import '../../../core/api/auth_api.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../core/telemetry/ws_telemetry.dart';
 import '../../../core/zkp/poseidon_bn254.dart' as poseidon;
+import '../../../core/zkp/groth_prover.dart';
 
 // ─── Events ───────────────────────────────────────────────────────────────────
 
@@ -126,7 +124,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   // ─── Register device ───────────────────────────────────────────────────────
   // Flow:
   //   1. Generate 32-byte CSPRNG secret
-  //   2. Compute commitment = SHA-256(secret) used as Poseidon stand-in for demo
+  //   2. Compute commitment = Poseidon([secret]) — real circomlib Poseidon,
+  //      verified against circomlibjs test vectors (not a SHA-256 stand-in)
   //   3. POST /auth/register { commitment_hash, public_key_hex }
   //   4. Save secret to SecureStorage
   //   5. Emit AuthRegistered → UI transitions to Login
@@ -165,7 +164,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   // ─── Login ─────────────────────────────────────────────────────────────────
   // Flow:
   //   1. Fetch challenge nonce from server
-  //   2. Generate ZK proof  (demo: SHA-256 mock when WASM unavailable)
+  //   2. Generate a REAL Groth16 proof on-device (snarkjs running inside
+  //      a hidden WebView, against the bundled auth.wasm/auth.zkey —
+  //      see core/zkp/groth_prover.dart)
   //   3. Submit proof → receive JWT tokens
   //   4. Save tokens, open WS, navigate to dashboard
 
@@ -181,21 +182,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(const AuthChallenging());
       final challenge = await _authApi.fetchChallenge();
 
-      // Step 2: Generate proof
-      // For demo: use mock proof (SHA-256 based) when circuit WASM not available
-      // Real proof generation requires auth.wasm + auth.zkey in assets
+      // Step 2: Generate a REAL Groth16 proof on-device via a hidden
+      // WebView running snarkjs against the bundled auth.wasm/auth.zkey.
+      // See core/zkp/groth_prover.dart for how this bridge works.
       emit(const AuthProving());
-      final mockProof = _buildMockProof(
-        nonceHex:  challenge.nonce,
-        secretHex: secretHex,
-      );
+      final secretField = poseidon.hexToField(secretHex);
+      final nonceField  = poseidon.hexToField(challenge.nonce);
 
-      // Step 3: Submit proof
+      final prover = GrothProver();
+      await prover.init();
+      late final ProverResult result;
+      try {
+        result = await prover.generateProof(
+          secretField: secretField.toString(),
+          nonceField:  nonceField.toString(),
+        );
+      } finally {
+        prover.dispose();
+      }
+
+      // Step 3: Submit the REAL proof
       emit(const AuthSubmitting());
       final tokens = await _authApi.submitProof(
         challengeId:   challenge.challengeId,
-        proof:         mockProof.proof,
-        publicSignals: mockProof.publicSignals,
+        proof:         result.proof,
+        publicSignals: result.publicSignals,
       );
 
       // Step 4: Persist tokens + open WS
@@ -235,14 +246,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthStepUpProving());
       final challenge = await _authApi.fetchStepUpChallenge();
-      final mockProof = _buildMockProof(
-        nonceHex:  challenge.nonce,
-        secretHex: secretHex,
-      );
+
+      final secretField = poseidon.hexToField(secretHex);
+      final nonceField  = poseidon.hexToField(challenge.nonce);
+
+      final prover = GrothProver();
+      await prover.init();
+      late final ProverResult result;
+      try {
+        result = await prover.generateProof(
+          secretField: secretField.toString(),
+          nonceField:  nonceField.toString(),
+        );
+      } finally {
+        prover.dispose();
+      }
+
       await _authApi.submitStepUpProof(
         challengeId:   challenge.challengeId,
-        proof:         mockProof.proof,
-        publicSignals: mockProof.publicSignals,
+        proof:         result.proof,
+        publicSignals: result.publicSignals,
       );
       final sessionId = await _storage.getSessionId() ?? '';
       emit(AuthAuthenticated(sessionId: sessionId));
@@ -270,59 +293,4 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
     return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
-
-  String _sha256Hex(String input) {
-    final bytes  = utf8.encode(input);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
-  String _hexToDecimal(String hex) {
-    // Convert hex string to decimal string (BigInt arithmetic via string ops)
-    // Dart doesn't have BigInt.parse(hex) natively for very large numbers,
-    // but we can use int parsing for 64-char hex → truncate to fit field
-    try {
-      // Take first 15 hex chars (60 bits) to stay within safe int range
-      // In production: use the `big_integer` package for full BN254 field arithmetic
-      final truncated = hex.length > 15 ? hex.substring(0, 15) : hex;
-      final value     = int.parse(truncated, radix: 16);
-      return value.toString();
-    } catch (_) {
-      return '123456789012345'; // fallback for demo
-    }
-  }
-
-  /// Build a mock Groth16 proof structure for demo/testing.
-  /// Real proof requires WASM circuit files in assets/.
-  /// The backend verifies with snarkjs — this will fail verification
-  /// but allows testing the full API flow end-to-end.
-  _MockProof _buildMockProof({
-    required String nonceHex,
-    required String secretHex,
-  }) {
-    // Compute Poseidon-correct public signals — must match auth.circom:
-    //   publicSignals[0] = nullifier = Poseidon([secret, nonce])
-    //   publicSignals[1] = commitment = Poseidon([secret])
-    final secretField = poseidon.hexToField(secretHex);
-    final nonceField  = poseidon.hexToField(nonceHex);
-    final nullifier   = poseidon.poseidonHash([secretField, nonceField]);
-    final commitment  = poseidon.poseidonHash([secretField]);
-
-    return _MockProof(
-      proof: {
-        'pi_a': ['1', '2', '1'],
-        'pi_b': [['10', '11'], ['12', '13'], ['1', '0']],
-        'pi_c': ['4', '5', '1'],
-        'protocol': 'groth16',
-        'curve': 'bn254',
-      },
-      publicSignals: [nullifier, commitment],
-    );
-  }
-}
-
-class _MockProof {
-  final Map<String, dynamic> proof;
-  final List<String> publicSignals;
-  const _MockProof({required this.proof, required this.publicSignals});
 }

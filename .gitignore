@@ -37,14 +37,14 @@ ml-service/models/**/*.h5
 ml-service/models/**/*.pkl
 !ml-service/models/.gitkeep
 
-# ZKP artifacts (generated — do not commit proving keys to version control)
-backend/circuits/**/*.zkey
-backend/circuits/**/*.r1cs
+# ZKP artifacts
+# NOTE: zkey/wasm/r1cs ARE committed for this project (unlike most ZKP repos)
+# because friends/collaborators benchmarking this system need to run the
+# REAL compiled circuit + REAL proving key without redoing trusted setup —
+# regenerating a zkey produces a DIFFERENT, incompatible proving key since
+# the setup ceremony involves fresh randomness. Only *.wtns (per-run witness
+# files, regenerated every proof, never needed by anyone else) stay ignored.
 backend/circuits/**/*.wtns
-backend/circuits/**/auth_js/
-backend/circuits/**/merkle_disclosure_js/
-!backend/circuits/**/*.circom
-!backend/circuits/**/verification_key.json
 
 # gRPC generated stubs
 backend/src/grpc/generated/

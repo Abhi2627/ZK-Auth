@@ -1,0 +1,143 @@
+{
+  "generatedAt": "2026-06-18T10:37:06.965Z",
+  "apiBase": "http://localhost:3001/api/v1",
+  "trialsRequested": 120,
+  "trialsSucceeded": 120,
+  "trialsFailed": 0,
+  "successRatePct": 100,
+  "failureBreakdown": {},
+  "zkpLoginLatency_ms": {
+    "challenge": {
+      "n": 120,
+      "mean": 4.119,
+      "median": 4.205,
+      "stddev": 0.751,
+      "min": 2.599,
+      "max": 9.488,
+      "p95": 4.875,
+      "p99": 6.524
+    },
+    "poseidonHash": {
+      "n": 120,
+      "mean": 0.19,
+      "median": 0.19,
+      "stddev": 0.014,
+      "min": 0.145,
+      "max": 0.233,
+      "p95": 0.214,
+      "p99": 0.229
+    },
+    "groth16ProveLocal": {
+      "n": 120,
+      "mean": 63.383,
+      "median": 61.926,
+      "stddev": 11.859,
+      "min": 59.651,
+      "max": 191.065,
+      "p95": 65.414,
+      "p99": 77.391
+    },
+    "verifyServerRoundTrip": {
+      "n": 120,
+      "mean": 66.844,
+      "median": 65.796,
+      "stddev": 15.62,
+      "min": 53.664,
+      "max": 223.939,
+      "p95": 75.867,
+      "p99": 81.675
+    },
+    "totalEndToEnd": {
+      "n": 120,
+      "mean": 134.536,
+      "median": 132.513,
+      "stddev": 27.398,
+      "min": 119.331,
+      "max": 424.725,
+      "p95": 143.062,
+      "p99": 156.289
+    }
+  },
+  "payloadSizes_bytes": {
+    "challengeResponse": {
+      "n": 120,
+      "mean": 157,
+      "median": 157,
+      "stddev": 0,
+      "min": 157,
+      "max": 157,
+      "p95": 157,
+      "p99": 157
+    },
+    "groth16ProofObject": {
+      "n": 120,
+      "mean": 723.067,
+      "median": 723,
+      "stddev": 1.521,
+      "min": 719,
+      "max": 727,
+      "p95": 726,
+      "p99": 726
+    },
+    "fullVerifyRequest": {
+      "n": 120,
+      "mean": 1044.967,
+      "median": 1045,
+      "stddev": 1.673,
+      "min": 1041,
+      "max": 1049,
+      "p95": 1048,
+      "p99": 1049
+    },
+    "verifyResponse": {
+      "n": 120,
+      "mean": 863,
+      "median": 863,
+      "stddev": 0,
+      "min": 863,
+      "max": 863,
+      "p95": 863,
+      "p99": 863
+    }
+  },
+  "argon2idBaseline_ms": {
+    "note": "Reference cost for traditional password-style auth, using this project's own production Argon2id parameters (memoryCost=65536 KiB, timeCost=3, parallelism=1) from backend/.env. Not a full OAuth/password round trip -- isolates the cryptographic hashing cost specifically, which is the dominant cost in password auth.",
+    "trials": 30,
+    "hash": {
+      "n": 30,
+      "mean": 86.619,
+      "median": 86.446,
+      "stddev": 1.091,
+      "min": 84.652,
+      "max": 91.004,
+      "p95": 87.781,
+      "p99": 91.004
+    },
+    "verify": {
+      "n": 30,
+      "mean": 86.174,
+      "median": 86.442,
+      "stddev": 0.833,
+      "min": 84.271,
+      "max": 87.623,
+      "p95": 87.164,
+      "p99": 87.623
+    },
+    "total": {
+      "n": 30,
+      "mean": 172.793,
+      "median": 172.823,
+      "stddev": 1.267,
+      "min": 169.307,
+      "max": 175.275,
+      "p95": 174.587,
+      "p99": 175.275
+    }
+  },
+  "methodologyNotes": [
+    "All ZKP timings are from a REAL end-to-end pipeline: real Poseidon (circomlibjs), real Groth16 proof generation (snarkjs.groth16.fullProve against the actual compiled auth.wasm/auth.zkey), and real HTTP round trips to the actual running Express backend with real Postgres+Redis.",
+    "verifyServerRoundTrip (/auth/verify) INCLUDES an intentional ~50ms (+/-10ms jitter) artificial delay in backend/src/services/zkp/zkp.service.ts (constant TARGET_VERIFY_MS), added as a timing-attack mitigation (T14: prevents inferring user existence from response-time differences). This means verifyServerRoundTrip reflects (real verification cost + security padding), not raw cryptographic verification cost alone. Report this explicitly if comparing against systems without equivalent timing-attack hardening.",
+    "groth16ProveLocal is measured on this benchmark machine (the developer machine running this script), using Node.js snarkjs -- NOT measured on the actual mobile device. Mobile proof generation (via the WebView/JS bridge) has a separate, higher cost due to WebView startup and JS engine overhead; benchmark that path separately on-device if the paper needs mobile-specific numbers.",
+    "Rate limits (RATE_LIMIT_CHALLENGE_PER_MIN, RATE_LIMIT_AUTH_PER_MIN) were temporarily raised in backend/.env.local (the file actually loaded by npm run dev / start.sh) to permit rapid sequential trials; this does not affect per-request latency or correctness, only the rate at which trials could be run."
+  ]
+}

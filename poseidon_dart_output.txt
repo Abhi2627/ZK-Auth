@@ -1,167 +1,9 @@
-/// Poseidon hash for BN254 — matches circomlib's OPTIMIZED Poseidon exactly.
-///
-/// Used to compute:
-///   commitment = Poseidon([secret])        — sent at registration
-///   nullifier  = Poseidon([secret, nonce]) — sent as a public signal
-///
-/// These must exactly match what auth.circom computes inside the WASM
-/// prover, because the circuit (compiled by circom, using circomlib's
-/// Poseidon template) implements the OPTIMIZED variant — not the naive
-/// "add constants + full S-box every round + dense MDS every round"
-/// textbook version. The optimized variant restructures the partial-round
-/// linear layer into a sparse form (matrices `S`) for performance; getting
-/// this structure wrong produces a hash that silently does not match the
-/// circuit, with no error at runtime.
-///
-/// Algorithm (mirrors circomlibjs/src/poseidon.js exactly):
-///   1. state = [0, ...inputs], then add round constants C[0..t-1] once.
-///   2. (nRoundsF/2 - 1) FULL rounds: pow5 all, add next C-slice, multiply
-///      by dense matrix M.
-///   3. ONE transitional full round: pow5 all, add next C-slice, multiply
-///      by matrix P (not M).
-///   4. nRoundsP PARTIAL rounds: pow5 ONLY state[0], add a single scalar
-///      constant to state[0], then apply the sparse linear layer encoded
-///      in S (not a full matrix multiply).
-///   5. (nRoundsF/2 - 1) more FULL rounds: pow5 all, add next C-slice,
-///      multiply by M.
-///   6. ONE final round: pow5 all (no constant add), multiply by M.
-///   Output = state[0] after step 6... actually circomlibjs returns
-///   F.normalize(state[0]) — see poseidon() below, mirrored exactly.
-///
-/// Constants (C, M, P, S) below were extracted directly from
-/// node_modules/circomlibjs/src/poseidon_constants_opt.json via a small
-/// Node script (see /extract_poseidon.js in the repo root) — not
-/// hand-transcribed — to eliminate any risk of a mistyped digit silently
-/// breaking the hash. Cross-checked against real circomlibjs output via
-/// the test vectors at the bottom of this file (see poseidon_bn254_test.dart).
+// ============================================================
+// AUTO-GENERATED from node_modules/circomlibjs - DO NOT HAND EDIT
+// Source: poseidon_constants_opt.json, t-2 index = [0]=t2, [1]=t3
+// ============================================================
 
-library poseidon_bn254;
-
-// ─── BN254 scalar field arithmetic ───────────────────────────────────────────
-
-final BigInt _p = BigInt.parse(
-  '21888242871839275222246405745257275088548364400416034343698204186575808495617',
-);
-
-BigInt _mod(BigInt a) => ((a % _p) + _p) % _p;
-BigInt _add(BigInt a, BigInt b) => _mod(a + b);
-BigInt _mul(BigInt a, BigInt b) => _mod(a * b);
-
-BigInt _pow5(BigInt x) {
-  final x2 = _mul(x, x);
-  final x4 = _mul(x2, x2);
-  return _mul(x4, x);
-}
-
-/// Hex string → BN254 field element → BigInt
-BigInt hexToField(String hex) {
-  final clean = hex.startsWith('0x') ? hex.substring(2) : hex;
-  return _mod(BigInt.parse(clean, radix: 16));
-}
-
-// ─── Public API ───────────────────────────────────────────────────────────────
-
-/// BN254 Poseidon hash for 1 or 2 inputs (matches circomlib Poseidon(1)/Poseidon(2)).
-/// Returns the hash as a decimal string (BN254 field element) — the same
-/// string format the circuit's public signals use.
-String poseidonHash(List<BigInt> inputs) {
-  assert(inputs.length == 1 || inputs.length == 2,
-      'poseidonHash supports 1 or 2 inputs');
-  return _poseidon(inputs).toString();
-}
-
-// ─── Poseidon permutation — mirrors circomlibjs/src/poseidon.js exactly ──────
-
-const int _nRoundsF = 8;
-// N_ROUNDS_P indexed by t-2; only t=2 (index 0) and t=3 (index 1) used here.
-const List<int> _nRoundsP = [56, 57];
-
-BigInt _poseidon(List<BigInt> inputs) {
-  final int t = inputs.length + 1;
-  final int nRoundsP = _nRoundsP[t - 2];
-
-  final List<BigInt> C = t == 2 ? _C2 : _C3;
-  final List<List<BigInt>> M = t == 2 ? _M2 : _M3;
-  final List<List<BigInt>> P = t == 2 ? _P2 : _P3;
-  final List<BigInt> S = t == 2 ? _S2 : _S3;
-
-  // state = [0, ...inputs]
-  List<BigInt> state = [BigInt.zero, ...inputs.map(_mod)];
-
-  // Initial constant addition
-  state = List.generate(t, (i) => _add(state[i], C[i]));
-
-  // (nRoundsF/2 - 1) full rounds using dense matrix M
-  for (int r = 0; r < (_nRoundsF ~/ 2) - 1; r++) {
-    state = state.map(_pow5).toList();
-    state = List.generate(t, (i) => _add(state[i], C[(r + 1) * t + i]));
-    state = _applyMatrix(M, state, t);
-  }
-
-  // One transitional full round using matrix P
-  state = state.map(_pow5).toList();
-  state = List.generate(
-    t,
-    (i) => _add(state[i], C[((_nRoundsF ~/ 2) - 1 + 1) * t + i]),
-  );
-  state = _applyMatrix(P, state, t);
-
-  // nRoundsP partial rounds using the sparse S representation.
-  // Only state[0] gets the S-box and a constant; the linear layer is
-  // encoded as: s0' = sum_j S[(2t-1)*r + j] * state[j]
-  //              state[k]' = state[k] + state[0] * S[(2t-1)*r + t + k - 1]  for k>=1
-  // (state[0] here is the value AFTER its own pow5+constant step, applied
-  // before computing s0' — matching poseidon.js's order exactly.)
-  for (int r = 0; r < nRoundsP; r++) {
-    state[0] = _pow5(state[0]);
-    state[0] = _add(state[0], C[((_nRoundsF ~/ 2) + 1) * t + r]);
-
-    BigInt s0 = BigInt.zero;
-    for (int j = 0; j < t; j++) {
-      s0 = _add(s0, _mul(S[(t * 2 - 1) * r + j], state[j]));
-    }
-    for (int k = 1; k < t; k++) {
-      state[k] = _add(state[k], _mul(state[0], S[(t * 2 - 1) * r + t + k - 1]));
-    }
-    state[0] = s0;
-  }
-
-  // (nRoundsF/2 - 1) more full rounds using M
-  for (int r = 0; r < (_nRoundsF ~/ 2) - 1; r++) {
-    state = state.map(_pow5).toList();
-    state = List.generate(
-      t,
-      (i) => _add(
-        state[i],
-        C[((_nRoundsF ~/ 2) + 1) * t + nRoundsP + r * t + i],
-      ),
-    );
-    state = _applyMatrix(M, state, t);
-  }
-
-  // Final round: pow5 all, no constant add, multiply by M
-  state = state.map(_pow5).toList();
-  state = _applyMatrix(M, state, t);
-
-  return _mod(state[0]);
-}
-
-List<BigInt> _applyMatrix(List<List<BigInt>> mat, List<BigInt> state, int t) {
-  return List.generate(t, (i) {
-    BigInt acc = BigInt.zero;
-    for (int j = 0; j < t; j++) {
-      acc = _add(acc, _mul(mat[j][i], state[j]));
-    }
-    return acc;
-  });
-}
-
-// ─── Constants — AUTO-EXTRACTED, do not hand-edit ────────────────────────────
-// Source: node_modules/circomlibjs/src/poseidon_constants_opt.json
-// Extracted via /extract_poseidon.js (repo root) on 2026-06-18.
-// t=2: C has 72 entries, M/P are 2x2, S has 168 entries.
-// t=3: C has 81 entries, M/P are 3x3, S has 285 entries.
-
+// ---- t=2 ----
 final List<BigInt> _C2 = <String>[
   '4417881134626180770308697923359573201005643519861877412381846989312604493735',
   '5433650512959517612316327474713065966758808864213826738576266661723522780033',
@@ -430,6 +272,9 @@ final List<BigInt> _S2 = <String>[
   '5776684794125549462448597414050232243778680302179439492664047328281728356345',
 ].map((s) => BigInt.parse(s)).toList();
 
+// lengths for t=2: C=72 M=2x2 P=2x2 S=168
+
+// ---- t=3 ----
 final List<BigInt> _C3 = <String>[
   '6745197990210204598374042828761989596302876299545964402857411729872131034734',
   '426281677759936592021316809065178817848084678679510574715894138690250139748',
@@ -837,3 +682,14 @@ final List<BigInt> _S3 = <String>[
   '18732019378264290557468133440468564866454307626475683536618613112504878618481',
   '9131299761947733513298312097611845208338517739621853568979632113419485819303',
 ].map((s) => BigInt.parse(s)).toList();
+
+// lengths for t=3: C=81 M=3x3 P=3x3 S=285
+
+// ============================================================
+// TEST VECTORS (for cross-checking the Dart port)
+// ============================================================
+
+// poseidon(["1"])              = 18586133768512220936620570745912940619677854269274689475585506675881198879027
+// poseidon(["1","2"])          = 7853200120776062878684798364095072458815029376092732009249414926327459813530
+// poseidon(["12345","67890"])  = 11344094074881186137859743404234365978119253787583526441303892667757095072923
+// poseidon(["123456789012345678901234567890"]) = 192670425303263827811639944807869901400572500529303854296361502138035327707

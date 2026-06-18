@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!--
+  Real Groth16 prover bridge — runs inside a hidden WebView.
+
+  Flutter has no native JS/WASM execution environment, but snarkjs (the
+  same library the web app uses) is plain JS + WASM. This page runs the
+  actual groth16.fullProve() against the same auth.wasm/auth.zkey circuit
+  files the web app and backend use, and posts the resulting REAL proof
+  back to Dart via a JavaScriptChannel.
+
+  IMPORTANT — why everything is passed as bytes, not file paths:
+  Android WebView's file:// scheme (which is what loadFlutterAsset/
+  loadHtmlString render under) blocks access to arbitrary absolute paths
+  by default (net::ERR_ACCESS_DENIED) and relative paths resolve relative
+  to the loaded document's own directory, not the Flutter asset root —
+  neither approach can reliably reach bundled asset files from inside the
+  WebView's JS context.
+  Verified against snarkjs's actual source (node_modules/snarkjs/src/
+  wtns_calculate.js + node_modules/fastfile/src/fastfile.js): the
+  underlying fastfile.readExisting() explicitly accepts a Uint8Array
+  directly (bypassing any file/URL access entirely) — and
+  groth16_prove.js's zkey loading goes through the exact same fastfile
+  mechanism via @iden3/binfileutils. So: Dart reads the wasm/zkey assets
+  as bytes (via rootBundle), base64-encodes them, and passes them here;
+  this page decodes them back to Uint8Array and hands those directly to
+  snarkjs — no file access of any kind happens inside the WebView.
+
+  snarkjs itself is inlined directly into this document by Dart (see
+  GrothProver.init() in groth_prover.dart) for the same reason — even
+  loading it via <script src> hit the identical file:// restriction.
+-->
+<html>
+<head>
+  <meta charset="utf-8" />
+  <!-- Dart injects <script>...inlined snarkjs.min.js...</script> right
+       after this <head> tag, before loadHtmlString(). See
+       GrothProver.init() in groth_prover.dart. -->
+</head>
+<body>
+<script>
+  function base64ToUint8Array(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  // Called by Dart via controller.runJavaScript(...) with a JSON string:
+  //   { secretField, nonceField, wasmBase64, zkeyBase64 }
+  // secretField/nonceField are decimal BN254 field-element strings,
+  // already reduced mod p by Dart (poseidon_bn254.dart's hexToField) —
+  // matching exactly what witness.ts does on the web side.
+  // wasmBase64/zkeyBase64 are the circuit files, base64-encoded by Dart
+  // from the bundled Flutter assets (see groth_prover.dart).
+  async function generateProof(inputJson) {
+    try {
+      const input = JSON.parse(inputJson);
+
+      const witnessInput = {
+        secret: input.secretField,
+        nonce:  input.nonceField,
+      };
+
+      const wasmBytes = base64ToUint8Array(input.wasmBase64);
+      const zkeyBytes = base64ToUint8Array(input.zkeyBase64);
+
+      const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+        witnessInput,
+        wasmBytes,
+        zkeyBytes,
+      );
+
+      ProverChannel.postMessage(JSON.stringify({
+        ok: true,
+        proof: proof,
+        publicSignals: publicSignals,
+      }));
+    } catch (err) {
+      ProverChannel.postMessage(JSON.stringify({
+        ok: false,
+        error: (err && err.message) ? err.message : String(err),
+      }));
+    }
+  }
+
+  // Signal to Dart that snarkjs has loaded and the page is ready.
+  window.addEventListener('load', function () {
+    if (typeof snarkjs === 'undefined') {
+      ProverChannel.postMessage(JSON.stringify({
+        ready: false,
+        error: 'snarkjs failed to load \u2014 the inlined script may be missing or malformed',
+      }));
+      return;
+    }
+    ProverChannel.postMessage(JSON.stringify({ ready: true }));
+  });
+</script>
+</body>
+</html>

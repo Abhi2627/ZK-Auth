@@ -22,6 +22,11 @@ dependencies:
   # Secure storage
   flutter_secure_storage: ^9.0.0
 
+  # WebView — hosts a hidden local HTML/JS page that runs the real
+  # snarkjs Groth16 prover (same auth.wasm/auth.zkey as the web app),
+  # since Flutter has no native JS/WASM execution environment of its own.
+  webview_flutter: ^4.8.0
+
   # WebSocket
   web_socket_channel: ^3.0.0
 
@@ -64,3 +69,5 @@ flutter:
   assets:
     - assets/circuits/
     - assets/images/
+    - assets/vendor/
+    - assets/prover/

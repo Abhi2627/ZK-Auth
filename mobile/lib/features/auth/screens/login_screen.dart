@@ -101,6 +101,33 @@ class LoginScreen extends StatelessWidget {
 
                   const SizedBox(height: 52),
 
+                  // ── Standalone Scan & Verify entry ────────────────────
+                  // Always visible, regardless of login/registration state.
+                  // Routes to /scan directly — no auth required, since
+                  // verification only calls the public verify-doc endpoint.
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF79C0FF),
+                      side: const BorderSide(color: Color(0xFF1F6FEB44)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () => context.push('/scan'),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('📷', style: TextStyle(fontSize: 16)),
+                        SizedBox(width: 10),
+                        Text(
+                          'Scan & Verify a Credential',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
                   // ── Main content based on state ───────────────────────────
                   _buildBody(context, state),
                 ],

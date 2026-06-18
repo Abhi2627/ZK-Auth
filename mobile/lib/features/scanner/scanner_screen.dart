@@ -107,9 +107,25 @@ class _ScannerScreenState extends State<ScannerScreen> {
         };
       });
     } on DioException catch (e) {
+      String message;
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        message =
+            'Could not reach the backend at ${AppConfig.apiHost}:${AppConfig.apiPort}.\n\n'
+            'Check:\n'
+            '• Backend is running (./start.sh on your Mac)\n'
+            '• Phone and Mac are on the same Wi-Fi network\n'
+            '• App was launched with the correct IP, e.g.\n'
+            '  flutter run --dart-define=API_HOST=<your-mac-lan-ip>\n'
+            '  (NOT "localhost" — that means the phone itself, not your Mac)';
+      } else if (e.response?.statusCode != null) {
+        message = 'Backend returned ${e.response!.statusCode}: ${e.message}';
+      } else {
+        message = 'Backend error: ${e.message}';
+      }
       setState(() {
         _verifying = false;
-        _error     = 'Backend error: ${e.message}';
+        _error     = message;
       });
     } catch (e) {
       setState(() {
@@ -389,6 +405,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
           const SizedBox(height: 8),
           Text(_error ?? 'Unknown error', textAlign: TextAlign.center,
             style: const TextStyle(color: Color(0xFF8B949E), fontSize: 13)),
+          const SizedBox(height: 12),
+          Text(
+            'Configured backend: ${AppConfig.apiHost}:${AppConfig.apiPort}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF484F58), fontSize: 11, fontFamily: 'monospace'),
+          ),
           const SizedBox(height: 24),
           ElevatedButton(
             style: ElevatedButton.styleFrom(

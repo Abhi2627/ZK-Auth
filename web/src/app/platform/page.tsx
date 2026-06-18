@@ -26,6 +26,27 @@ interface RegisterForm {
   contact_name:   string;
 }
 
+// Shape of the real backend response from POST /api/platform/register-institute.
+// Only the fields this page actually renders are typed here.
+interface RegisterInstituteResponse {
+  institute: {
+    name: string;
+    did:  string;
+    slug: string;
+  };
+  cryptographic_identity: {
+    did:              string;
+    public_key_hex:   string;
+    private_key_hex:  string;
+    private_key_warning: string;
+  };
+  api_credentials: {
+    api_key:           string;
+    issuer_portal_url: string;
+    did_document_url:  string;
+  };
+}
+
 type PricingTier = 'free' | 'starter' | 'professional' | 'enterprise';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -235,6 +256,8 @@ export default function PlatformPage() {
   });
   const [submitState, setSubmitState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [registrationResult, setRegistrationResult] = useState<RegisterInstituteResponse | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [selectedPricing, setSelectedPricing] = useState<PricingTier>('professional');
   const [statsVisible, setStatsVisible] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
@@ -289,12 +312,14 @@ export default function PlatformPage() {
         const d = await r.json().catch(() => ({})) as { message?: string };
         throw new Error(d.message ?? 'Registration failed');
       }
+      const data = await r.json() as RegisterInstituteResponse;
+      setRegistrationResult(data);
       setSubmitState('success');
       // Store institute identity so the issuer portal can read it
       const regData = {
-        name: registerForm.institute_name,
+        name: data.institute.name,
         type: registerForm.institute_type,
-        did:  `did:web:${registerForm.institute_name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 40)}.zk-auth.io`,
+        did:  data.institute.did,
       };
       sessionStorage.setItem('institute_registration', JSON.stringify(regData));
     } catch (e) {
@@ -306,6 +331,17 @@ export default function PlatformPage() {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     setMobileMenuOpen(false);
+  };
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(prev => (prev === field ? null : prev)), 2000);
+    } catch {
+      // Clipboard API can fail (permissions, non-HTTPS context) — fail silently,
+      // the value is still selectable/visible on screen as a fallback.
+    }
   };
 
   return (
@@ -728,25 +764,74 @@ export default function PlatformPage() {
 
           {/* Right: form */}
           <div style={s.registerForm}>
-            {submitState === 'success' ? (
+            {submitState === 'success' && registrationResult ? (
               <div style={s.successPanel}>
                 <div style={s.successIcon}>🎉</div>
-                <h3 style={s.successTitle}>Registration Received</h3>
+                <h3 style={s.successTitle}>Your Institute Is Live</h3>
                 <p style={s.successText}>
-                  We've received your registration for <strong>{registerForm.institute_name}</strong>.
-                  Your institute DID and signing keys will be provisioned and sent to{' '}
-                  <strong>{registerForm.email}</strong> within minutes.
+                  <strong>{registrationResult.institute.name}</strong> is registered.
+                  Your DID, signing key, and API key are shown below —
+                  <strong> this is the only time the private key is shown.</strong>{' '}
+                  Copy it now and store it somewhere safe; ZK-Auth does not keep a copy.
                 </p>
-                <div style={s.successChecks}>
-                  {[
-                    '📧 Confirmation email sent',
-                    '🔑 Keypair generation in progress',
-                    '🌐 DID document being published',
-                    '🚀 Issuer portal provisioning',
-                  ].map(item => <p key={item} style={{ margin: '4px 0', fontSize: 13, color: '#4ade80' }}>{item}</p>)}
+
+                {/* DID */}
+                <div style={s.credentialBox}>
+                  <div style={s.credentialBoxHeader}>
+                    <span style={s.credentialLabel}>🌐 Institute DID</span>
+                    <button
+                      style={s.copyBtn}
+                      onClick={() => copyToClipboard(registrationResult.institute.did, 'did')}
+                    >
+                      {copiedField === 'did' ? '✓ Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <code style={s.credentialValue}>{registrationResult.institute.did}</code>
                 </div>
+
+                {/* Private key — most important, visually distinct */}
+                <div style={{ ...s.credentialBox, border: '1px solid #f0883e', background: '#1a1205' }}>
+                  <div style={s.credentialBoxHeader}>
+                    <span style={{ ...s.credentialLabel, color: '#f0883e' }}>🔑 Private Signing Key (Ed25519)</span>
+                    <button
+                      style={s.copyBtn}
+                      onClick={() => copyToClipboard(registrationResult.cryptographic_identity.private_key_hex, 'privateKey')}
+                    >
+                      {copiedField === 'privateKey' ? '✓ Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <code style={s.credentialValue}>{registrationResult.cryptographic_identity.private_key_hex}</code>
+                  <p style={s.credentialWarning}>
+                    ⚠️ {registrationResult.cryptographic_identity.private_key_warning}
+                  </p>
+                </div>
+
+                {/* API key */}
+                <div style={s.credentialBox}>
+                  <div style={s.credentialBoxHeader}>
+                    <span style={s.credentialLabel}>🔐 API Key</span>
+                    <button
+                      style={s.copyBtn}
+                      onClick={() => copyToClipboard(registrationResult.api_credentials.api_key, 'apiKey')}
+                    >
+                      {copiedField === 'apiKey' ? '✓ Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <code style={s.credentialValue}>{registrationResult.api_credentials.api_key}</code>
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: '#484f58' }}>
+                    Use as the <code>X-Institute-API-Key</code> header for issuance calls.
+                  </p>
+                </div>
+
+                <div style={s.successChecks}>
+                  <p style={{ margin: '4px 0', fontSize: 13, color: '#4ade80' }}>✅ Keypair generated</p>
+                  <p style={{ margin: '4px 0', fontSize: 13, color: '#4ade80' }}>✅ DID document published</p>
+                  <p style={{ margin: '4px 0', fontSize: 13, color: '#4ade80' }}>✅ Issuer portal provisioned</p>
+                </div>
+
                 <p style={{ fontSize: 12, color: '#484f58', marginTop: 16 }}>
-                  (Demo mode: credentials are simulated. In production, this triggers real key generation and DID publication.)
+                  Nothing is emailed — everything above is generated and shown to you directly,
+                  once, right now. Reloading this page will not bring it back.
                 </p>
               </div>
             ) : (
@@ -851,7 +936,7 @@ export default function PlatformPage() {
 
                 <p style={s.formFootnote}>
                   By registering you agree to our Terms of Service and Privacy Policy.
-                  Your private key is generated client-side and never stored by ZK-Auth.
+                  Your private key is shown to you once on this page and never stored by ZK-Auth.
                 </p>
               </>
             )}
@@ -1140,6 +1225,17 @@ const s: Record<string, React.CSSProperties> = {
   successText:      { margin: '0 0 20px', fontSize: 14, color: '#8b949e', lineHeight: 1.6 },
   successChecks:    { background: '#0a1d0f', border: '1px solid #238636', borderRadius: 10,
                       padding: '16px 20px', textAlign: 'left' },
+  credentialBox:    { background: '#0d1117', border: '1px solid #21262d', borderRadius: 10,
+                      padding: '12px 14px', marginBottom: 12, textAlign: 'left' },
+  credentialBoxHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      marginBottom: 8 },
+  credentialLabel:  { fontSize: 12, fontWeight: 700, color: '#8b949e' },
+  copyBtn:          { background: '#21262d', border: '1px solid #30363d', color: '#c9d1d9',
+                      borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600,
+                      cursor: 'pointer', flexShrink: 0 },
+  credentialValue:  { display: 'block', fontSize: 11, color: '#79c0ff', wordBreak: 'break-all',
+                      lineHeight: 1.5, fontFamily: 'monospace' },
+  credentialWarning:{ margin: '8px 0 0', fontSize: 11, color: '#f0883e', lineHeight: 1.5 },
 
   // FOOTER
   footer:           { background: '#080c10', borderTop: '1px solid #21262d', padding: '60px 24px 32px' },
