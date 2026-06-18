@@ -1,0 +1,17 @@
+{
+  "auc_roc": 0.8157,
+  "far": 0.0615,
+  "frr": 0.5668,
+  "precision_normal": 0.9203,
+  "precision_anomaly": 0.5026,
+  "recall_normal": 0.9385,
+  "recall_anomaly": 0.4332,
+  "f1_normal": 0.9293,
+  "f1_anomaly": 0.4653,
+  "f1_weighted": 0.8711,
+  "inference_ms": 15.827,
+  "threshold": 0.75,
+  "n_test": 27027,
+  "n_genuine_test": 23638,
+  "n_intruder_test": 3389
+}

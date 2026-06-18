@@ -1,0 +1,110 @@
+{
+  "generatedAt": "2026-06-18T18:50:42.849Z",
+  "machine": {
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memGB": 16,
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v22.21.1"
+  },
+  "note": "Server and benchmark client running on same machine (localhost). Client-side proof generation cost excluded (proofs pre-generated offline). Measures pure server-side verify throughput: JWT decode + snarkjs verify + Redis nullifier check + DB insert + 50ms T14 timing pad. Production deployment (separate server + client machines, backend scaling) would show higher throughput than these single-machine numbers.",
+  "concurrencyLevels": [
+    1,
+    5,
+    10,
+    25,
+    50
+  ],
+  "results": {
+    "concurrency_1": {
+      "concurrency": 1,
+      "totalRequests": 10,
+      "successCount": 10,
+      "errorCount": 0,
+      "statusBreakdown": {
+        "200": 10
+      },
+      "latency_ms": {
+        "n": 10,
+        "mean": 84.278,
+        "median": 72.293,
+        "stddev": 43.954,
+        "min": 59.088,
+        "max": 215.34,
+        "p95": 215.34,
+        "p99": 215.34
+      },
+      "approxRPS_at_median_latency": 13.833
+    },
+    "concurrency_5": {
+      "concurrency": 5,
+      "totalRequests": 50,
+      "successCount": 50,
+      "errorCount": 0,
+      "statusBreakdown": {
+        "200": 50
+      },
+      "latency_ms": {
+        "n": 50,
+        "mean": 62.415,
+        "median": 61.663,
+        "stddev": 5.47,
+        "min": 54.579,
+        "max": 78.486,
+        "p95": 76.913,
+        "p99": 78.486
+      },
+      "approxRPS_at_median_latency": 81.086
+    },
+    "concurrency_10": {
+      "concurrency": 10,
+      "totalRequests": 100,
+      "successCount": 100,
+      "errorCount": 0,
+      "statusBreakdown": {
+        "200": 100
+      },
+      "latency_ms": {
+        "n": 100,
+        "mean": 61.269,
+        "median": 60.547,
+        "stddev": 6.17,
+        "min": 51.097,
+        "max": 81.604,
+        "p95": 72.267,
+        "p99": 81.604
+      },
+      "approxRPS_at_median_latency": 165.161
+    },
+    "concurrency_25": {
+      "concurrency": 25,
+      "totalRequests": 40,
+      "successCount": 40,
+      "errorCount": 0,
+      "statusBreakdown": {
+        "200": 40
+      },
+      "latency_ms": {
+        "n": 40,
+        "mean": 126.711,
+        "median": 151.843,
+        "stddev": 39.032,
+        "min": 74.255,
+        "max": 164.089,
+        "p95": 163.902,
+        "p99": 164.089
+      },
+      "approxRPS_at_median_latency": 164.644
+    },
+    "concurrency_50": {
+      "concurrency": 50,
+      "totalRequests": 0,
+      "successCount": 0,
+      "errorCount": 0,
+      "statusBreakdown": {},
+      "latency_ms": {},
+      "approxRPS_at_median_latency": 50000
+    }
+  }
+}

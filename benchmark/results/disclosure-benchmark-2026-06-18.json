@@ -1,0 +1,188 @@
+{
+  "circuit": "merkle_disclosure",
+  "circuitFile": "/Users/abhaydandge/Projects/ZK-Auth/backend/circuits/disclosure/merkle_disclosure_js/merkle_disclosure.wasm",
+  "zkeyFile": "/Users/abhaydandge/Projects/ZK-Auth/backend/circuits/disclosure/merkle_disclosure.zkey",
+  "generatedAt": "2026-06-18T18:46:53.841Z",
+  "machine": {
+    "cpu": "Apple M4",
+    "cores": 10,
+    "memGB": 16,
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeVersion": "v22.21.1"
+  },
+  "trials": 30,
+  "note": "Verify timings here are RAW snarkjs local verification (no HTTP, no T14 timing pad). In the real backend, /credential/verify-claim adds its own constant-time floor. Auth circuit used T14-padded verify; disclosure raw verify is reported separately to isolate pure cryptographic verification cost.",
+  "disclosureProveLocal_ms": {
+    "n": 30,
+    "mean": 178.314,
+    "median": 172.97,
+    "stddev": 24.71,
+    "min": 167.074,
+    "max": 310.118,
+    "p95": 180.874,
+    "p99": 310.118
+  },
+  "disclosureVerifyLocal_ms": {
+    "n": 30,
+    "mean": 6.074,
+    "median": 5.862,
+    "stddev": 0.72,
+    "min": 5.308,
+    "max": 7.841,
+    "p95": 7.72,
+    "p99": 7.841
+  },
+  "rawTrials": [
+    {
+      "trial": 1,
+      "proveMs": 310.118,
+      "verifyMs": 5.967
+    },
+    {
+      "trial": 2,
+      "proveMs": 179.915,
+      "verifyMs": 6.917
+    },
+    {
+      "trial": 3,
+      "proveMs": 177.385,
+      "verifyMs": 5.708
+    },
+    {
+      "trial": 4,
+      "proveMs": 175.661,
+      "verifyMs": 6.512
+    },
+    {
+      "trial": 5,
+      "proveMs": 171.695,
+      "verifyMs": 7.691
+    },
+    {
+      "trial": 6,
+      "proveMs": 171.408,
+      "verifyMs": 6.459
+    },
+    {
+      "trial": 7,
+      "proveMs": 172.755,
+      "verifyMs": 5.758
+    },
+    {
+      "trial": 8,
+      "proveMs": 180.874,
+      "verifyMs": 6.454
+    },
+    {
+      "trial": 9,
+      "proveMs": 172.539,
+      "verifyMs": 5.486
+    },
+    {
+      "trial": 10,
+      "proveMs": 179.533,
+      "verifyMs": 5.509
+    },
+    {
+      "trial": 11,
+      "proveMs": 176.553,
+      "verifyMs": 5.862
+    },
+    {
+      "trial": 12,
+      "proveMs": 174.655,
+      "verifyMs": 5.604
+    },
+    {
+      "trial": 13,
+      "proveMs": 180.716,
+      "verifyMs": 6.002
+    },
+    {
+      "trial": 14,
+      "proveMs": 170.339,
+      "verifyMs": 6.804
+    },
+    {
+      "trial": 15,
+      "proveMs": 172.937,
+      "verifyMs": 5.572
+    },
+    {
+      "trial": 16,
+      "proveMs": 172.701,
+      "verifyMs": 5.388
+    },
+    {
+      "trial": 17,
+      "proveMs": 167.074,
+      "verifyMs": 6.002
+    },
+    {
+      "trial": 18,
+      "proveMs": 172.974,
+      "verifyMs": 5.385
+    },
+    {
+      "trial": 19,
+      "proveMs": 170.931,
+      "verifyMs": 5.341
+    },
+    {
+      "trial": 20,
+      "proveMs": 171.2,
+      "verifyMs": 5.387
+    },
+    {
+      "trial": 21,
+      "proveMs": 177.389,
+      "verifyMs": 5.448
+    },
+    {
+      "trial": 22,
+      "proveMs": 175.99,
+      "verifyMs": 5.71
+    },
+    {
+      "trial": 23,
+      "proveMs": 169.939,
+      "verifyMs": 6.25
+    },
+    {
+      "trial": 24,
+      "proveMs": 171.646,
+      "verifyMs": 7.72
+    },
+    {
+      "trial": 25,
+      "proveMs": 173.299,
+      "verifyMs": 7.841
+    },
+    {
+      "trial": 26,
+      "proveMs": 169.431,
+      "verifyMs": 6.09
+    },
+    {
+      "trial": 27,
+      "proveMs": 172.128,
+      "verifyMs": 5.308
+    },
+    {
+      "trial": 28,
+      "proveMs": 173.343,
+      "verifyMs": 5.666
+    },
+    {
+      "trial": 29,
+      "proveMs": 172.97,
+      "verifyMs": 5.623
+    },
+    {
+      "trial": 30,
+      "proveMs": 171.336,
+      "verifyMs": 6.756
+    }
+  ]
+}
