@@ -42,7 +42,7 @@ ZK-Auth is a production-ready authentication platform that eliminates passwords 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLIENT LAYER                                │
-│   Next.js Web (WASM prover)   Flutter Mobile (Dart isolate prover) │
+│   Next.js Web (WASM prover)   Flutter Mobile (WebView/JS prover)   │
 └───────────────────────┬──────────────────────────┬─────────────────┘
                         │ HTTPS / WSS              │ HTTPS / WSS
                         ▼                          ▼
@@ -86,7 +86,7 @@ CLIENT                      GATEWAY                    DB / Cache
   │
   │  [Client: snarkjs.groth16.fullProve(                ]
   │  [ { nonce, secret }, auth.wasm, auth.zkey )        ]
-  │  [Runs in Web Worker / Dart isolate — UI unblocked  ]
+  │  [Runs in Web Worker (web) / hidden WebView (mobile) — UI unblocked]
   │
   │── POST /auth/verify ───────>│── fetch challenge (Redis GET)
   │   { challenge_id,           │── nullifier pre-check (Redis SISMEMBER)
@@ -652,8 +652,15 @@ Public outputs:  nullifier_hash = Poseidon(secret, nonce)
                  commitment_root = Poseidon(secret)
 
 Constraint count: ~350 (Poseidon is ~8x cheaper than SHA-256 in R1CS)
-Proof time (WASM, M1): ~400ms
-Verification time: ~2ms (server-side, in-memory vKey)
+Proof time (real, measured): ~60-65ms median on Apple M4 (snarkjs
+  groth16.fullProve, Node.js) -- see benchmark/ for the full multi-device
+  dataset and methodology. On-device mobile proof generation (via a
+  WebView/JS bridge running the same snarkjs) is measured separately and
+  has different overhead characteristics.
+Verification time: ~65ms server round trip (real cryptographic
+  verification is much faster than this, but every /auth/verify call is
+  deliberately padded to a ~50ms +/-10ms floor as a T14 timing-attack
+  mitigation -- see backend/src/services/zkp/zkp.service.ts).
 ```
 
 ### Disclosure Circuit (`circuits/disclosure/merkle_disclosure.circom`)
@@ -784,7 +791,8 @@ ZK-Auth/
         │   ├── api/             http_client · auth_api
         │   ├── storage/         secure_storage (Keychain/EncryptedSharedPrefs)
         │   ├── telemetry/       event_collector · ws_telemetry
-        │   └── zkp/             prover_service (Dart isolate)
+        │   └── zkp/             groth_prover (WebView+JS bridge to snarkjs)
+        │                        poseidon_bn254
         └── features/
             ├── auth/
             │   ├── bloc/        AuthBloc (events · states)

@@ -4,6 +4,17 @@
 // HTTP round trips to the real Express/Postgres/Redis stack) — nothing is
 // simulated or hand-waved.
 //
+// ─── FOR CONTRIBUTORS RUNNING THIS ON YOUR OWN LAPTOP ────────────────────────
+// See SETUP_FOR_BENCHMARKING.md in the repo root for full setup instructions.
+// Short version:
+//   1. npm install   (ONCE, from the REPO ROOT, not this folder — this script
+//      relies on circomlibjs/snarkjs/argon2 already being installed as part
+//      of the backend workspace; no separate package.json in benchmark/)
+//   2. ./start.sh   (starts Docker infra + backend + web)
+//   3. cd benchmark && node run_benchmark.mjs --name "yourname"
+//   4. Send the ONE file it produces (zkauth-benchmark-<yourname>-<date>.json)
+//      back via WhatsApp/email — that's the only file needed.
+//
 // What this measures, per trial:
 //   1. ZKP login cycle: challenge fetch -> Poseidon hash -> Groth16
 //      fullProve() -> /auth/verify round trip. Each phase timed separately.
@@ -11,12 +22,15 @@
 //      request body, verify response.
 //   3. Proof size (serialized JSON bytes) -- a standalone ZKP-specific cost
 //      metric papers in this space report.
-//   4. Argon2id baseline cost (your own recovery-flow hashing parameters --
-//      ARGON2_MEMORY_KIB=65536, ARGON2_ITERATIONS=3, ARGON2_PARALLELISM=1 --
-//      already running in graph: same library used for production
-//      password-style baseline comparisons). This is reported as a
-//      reference cost for the "traditional password" comparison, since
-//      Argon2id is the de facto modern standard for password hashing.
+//   4. Argon2id baseline cost (this project's own recovery-flow hashing
+//      parameters), as a reference cost for the "traditional password" auth
+//      comparison, since Argon2id is the de facto modern password-hashing
+//      standard.
+//   5. Hardware/OS fingerprint of the machine this ran on (CPU model, core
+//      count, total RAM, OS, Node version) -- embedded directly in the
+//      output file so results from different contributors are
+//      self-describing and don't depend on anyone remembering to report
+//      their specs separately.
 //
 // IMPORTANT METHODOLOGICAL NOTE -- read before citing /auth/verify numbers:
 //   backend/src/services/zkp/zkp.service.ts pads EVERY verify() call to a
@@ -24,49 +38,63 @@
 //   mitigation (T14: prevents an attacker inferring user existence from
 //   response-time differences). This means raw /auth/verify wall-clock
 //   time measured here reflects (real verification cost) + (artificial
-//   padding floor), NOT pure cryptographic verification cost. This script
+//   padding floor), NOT pure cryptographic verification cost. The output
 //   reports both the total measured latency (what a real client
-//   experiences) AND flags the padding constant explicitly in the summary,
-//   so you can correctly describe which number is "real-world latency
-//   including security hardening" vs. "raw verification cost" in the paper.
+//   experiences) AND flags the padding constant explicitly, so you can
+//   correctly describe which number is "real-world latency including
+//   security hardening" vs. "raw verification cost" in the paper.
 //
 // Usage:
-//   cd /Users/abhaydandge/Projects/ZK-Auth/benchmark
-//   node run_benchmark.mjs --trials 120
+//   node run_benchmark.mjs --name "yourname" [--trials 60] [--api http://localhost:3001/api/v1]
 //
-// Output:
-//   results_<timestamp>.csv   -- one row per trial, every phase timed
-//   summary_<timestamp>.json  -- aggregated stats (mean/median/p95/stddev)
+//   --name     REQUIRED. Used in the output filename so multiple
+//              contributors' files don't collide or get mixed up.
+//   --trials   Optional, default 60. 100+ recommended if your machine and
+//              patience allow; 60 is enough for a meaningful comparison.
+//   --api      Optional, default http://localhost:3001/api/v1. Only change
+//              this if you're benchmarking a non-default backend address.
 //
-// Prerequisites:
-//   - Backend running (./start.sh from repo root) and reachable at
-//     API_BASE below.
-//   - Rate limits temporarily raised in backend/.env.local (the file actually
-//     loaded by `npm run dev --env-file=.env.local` / start.sh -- NOT
-//     backend/.env, which is only used for Docker Compose). Already done --
-//     RATE_LIMIT_CHALLENGE_PER_MIN / RATE_LIMIT_AUTH_PER_MIN set to 600.
-//     Restore to 10/20 in backend/.env.local after data collection is done.
+// Output: ONE file, zkauth-benchmark-<name>-<YYYY-MM-DD>.json
+//   Contains: every trial's raw timings, aggregated stats, hardware
+//   fingerprint, and the methodology notes above -- everything needed to
+//   use this data, nothing else to attach.
 
 import poseidon from 'circomlibjs/src/poseidon.js';
 import * as snarkjs from 'snarkjs';
 import argon2 from 'argon2';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
 
-// ─── Config ─────────────────────────────────────────────────────────────────
+// ─── Config / CLI args ────────────────────────────────────────────────────────
 
-const API_BASE = process.env.API_BASE || 'http://localhost:3001/api/v1';
+function getArg(flag, fallback) {
+  const idx = process.argv.indexOf(flag);
+  return idx !== -1 ? process.argv[idx + 1] : fallback;
+}
+
+const CONTRIBUTOR_NAME = getArg('--name', null);
+const TRIALS = parseInt(getArg('--trials', '60'), 10);
+const API_BASE = getArg('--api', 'http://localhost:3001/api/v1');
+
+if (!CONTRIBUTOR_NAME) {
+  console.error('ERROR: --name is required, e.g.:');
+  console.error('  node run_benchmark.mjs --name "rohan"');
+  console.error('This is used in the output filename so multiple people\'s results don\'t collide.');
+  process.exit(1);
+}
+
+// Sanitize for safe use in a filename (letters, numbers, dash, underscore only)
+const SAFE_NAME = CONTRIBUTOR_NAME.replace(/[^a-zA-Z0-9_-]/g, '_');
+
 const WASM_PATH = path.join(REPO_ROOT, 'backend/circuits/auth/auth_js/auth.wasm');
 const ZKEY_PATH = path.join(REPO_ROOT, 'backend/circuits/auth/auth.zkey');
-
-const args = process.argv.slice(2);
-const trialsArgIdx = args.indexOf('--trials');
-const TRIALS = trialsArgIdx !== -1 ? parseInt(args[trialsArgIdx + 1], 10) : 120;
 
 const BN254_P = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
@@ -113,6 +141,9 @@ async function httpJson(url, options, timeoutMs = 15000) {
 }
 
 function stats(values) {
+  if (values.length === 0) {
+    return { n: 0, mean: null, median: null, stddev: null, min: null, max: null, p95: null, p99: null };
+  }
   const sorted = [...values].sort((a, b) => a - b);
   const n = sorted.length;
   const mean = sorted.reduce((a, b) => a + b, 0) / n;
@@ -134,28 +165,63 @@ function round(x) {
   return Math.round(x * 1000) / 1000;
 }
 
+/**
+ * Hardware/OS fingerprint, gathered entirely from Node's built-in `os`
+ * module -- no external dependencies, works identically on macOS, Windows,
+ * and Linux. Embedded directly in the output so every result file is
+ * self-describing.
+ */
+function getMachineFingerprint() {
+  const cpus = os.cpus();
+  const cpuModel = cpus.length > 0 ? cpus[0].model : 'unknown';
+  return {
+    contributorName: CONTRIBUTOR_NAME,
+    os: {
+      platform: os.platform(),       // 'darwin' | 'win32' | 'linux'
+      release: os.release(),
+      arch: os.arch(),                // 'x64' | 'arm64' etc.
+    },
+    cpu: {
+      model: cpuModel,
+      logicalCores: cpus.length,
+    },
+    memoryTotalGB: round(os.totalmem() / (1024 ** 3)),
+    nodeVersion: process.version,
+    hostnameHash: crypto.createHash('sha256').update(os.hostname()).digest('hex').slice(0, 12),
+    // hostname itself is hashed, not stored raw -- avoids leaking a
+    // contributor's actual device/computer name while still letting you
+    // tell two distinct machines apart if the same person runs this twice.
+  };
+}
+
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(`ZK-Auth Benchmark — ${TRIALS} trials against ${API_BASE}`);
-  console.log(`WASM: ${WASM_PATH}`);
-  console.log(`ZKEY: ${ZKEY_PATH}\n`);
+  const fingerprint = getMachineFingerprint();
+
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('  ZK-Auth Research Benchmark');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log(`  Contributor:  ${CONTRIBUTOR_NAME}`);
+  console.log(`  Machine:      ${fingerprint.cpu.model} (${fingerprint.cpu.logicalCores} cores), ${fingerprint.memoryTotalGB} GB RAM`);
+  console.log(`  OS:           ${fingerprint.os.platform} ${fingerprint.os.release} (${fingerprint.os.arch})`);
+  console.log(`  Node:         ${fingerprint.nodeVersion}`);
+  console.log(`  Trials:       ${TRIALS}`);
+  console.log(`  API:          ${API_BASE}`);
+  console.log('═══════════════════════════════════════════════════════════\n');
 
   if (!fs.existsSync(WASM_PATH)) {
     console.error(`ERROR: auth.wasm not found at ${WASM_PATH}`);
-    console.error('Check backend/circuits/auth/auth_js/ contains the compiled witness calculator.');
+    console.error('Did you clone the full repo? This file should already be committed --');
+    console.error('see SETUP_FOR_BENCHMARKING.md if it\'s missing.');
     process.exit(1);
   }
   if (!fs.existsSync(ZKEY_PATH)) {
     console.error(`ERROR: auth.zkey not found at ${ZKEY_PATH}`);
+    console.error('Did you clone the full repo? This file should already be committed --');
+    console.error('see SETUP_FOR_BENCHMARKING.md if it\'s missing.');
     process.exit(1);
   }
-
-  console.log('Loading Poseidon (circomlibjs)...');
-  // poseidon([...]) returns the hash directly as a BigInt -- no async
-  // build step or field-element unwrapping needed (this matches exactly
-  // how extract_poseidon.js used this same module earlier in the
-  // project, already verified correct against real test vectors).
 
   // ── One-time registration ─────────────────────────────────────────────────
   // Real users register once, then log in repeatedly -- this mirrors that,
@@ -166,7 +232,7 @@ async function main() {
   const secretField = hexToField(secretHex);
   const commitmentField = poseidon([secretField]);
   const commitmentHash = commitmentField.toString();
-  const publicKeyHex = secretHex; // 32 bytes hex, reused as a stand-in public key for the benchmark account
+  const publicKeyHex = secretHex;
 
   const registerRes = await httpJson(`${API_BASE}/auth/register`, {
     method: 'POST',
@@ -174,28 +240,30 @@ async function main() {
     body: JSON.stringify({
       commitment_hash: commitmentHash,
       public_key_hex: publicKeyHex,
-      device_label: 'benchmark-script',
+      device_label: `benchmark-${SAFE_NAME}`,
     }),
   });
 
   if (registerRes.status !== 201) {
     console.error('Registration failed:', registerRes.status, registerRes.raw);
+    console.error('\nIs the backend running? Try: ./start.sh from the repo root.');
+    console.error('Did it start cleanly? Check .logs/backend.log for errors.');
     process.exit(1);
   }
   console.log(`Registered. user_id=${registerRes.json.user_id}\n`);
 
-  // ── Argon2id baseline (your own recovery-flow parameters) ─────────────────
+  // ── Argon2id baseline ──────────────────────────────────────────────────────
   console.log('Benchmarking Argon2id baseline (password-hashing reference cost)...');
   const argon2Times = [];
-  const ARGON2_TRIALS = Math.min(30, TRIALS); // expensive by design; fewer trials is fine, it's a stable reference cost
+  const ARGON2_TRIALS = Math.min(30, TRIALS);
   const dummyPassword = 'BenchmarkPassword123!';
   for (let i = 0; i < ARGON2_TRIALS; i++) {
     const t0 = nowMs();
     const hash = await argon2.hash(dummyPassword, {
       type: argon2.argon2id,
-      memoryCost: 65536, // matches backend/.env ARGON2_MEMORY_KIB
-      timeCost: 3,       // matches ARGON2_ITERATIONS
-      parallelism: 1,    // matches ARGON2_PARALLELISM
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 1,
     });
     const hashMs = nowMs() - t0;
 
@@ -216,7 +284,6 @@ async function main() {
     process.stdout.write(`  [${i + 1}/${TRIALS}] starting...\r`);
 
     try {
-      // ── Phase 1: fetch challenge ──────────────────────────────────────────
       const challengeRes = await httpJson(`${API_BASE}/auth/challenge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -233,20 +300,11 @@ async function main() {
       const { challenge_id, nonce } = challengeRes.json;
       const nonceField = hexToField(nonce);
 
-      // ── Phase 2: real Poseidon hash (nullifier + commitment) ──────────────
-      // Timed standalone to isolate pure-hashing cost from the witness/proof
-      // generation pipeline below (which also computes Poseidon internally
-      // as part of executing the circuit, but bundled with everything else).
-      // nullifierField here is NOT reused downstream -- the authoritative
-      // nullifier_hash is whatever fullProve()'s publicSignals[0] returns
-      // (computed inside the circuit), kept separate so this measurement
-      // isn't contaminated by witness-calculation overhead.
       const tPoseidon0 = nowMs();
-      const nullifierField = poseidon([secretField, nonceField]);
+      poseidon([secretField, nonceField]); // timed standalone; see header note
       const tPoseidon1 = nowMs();
       trial.poseidonMs = round(tPoseidon1 - tPoseidon0);
 
-      // ── Phase 3: real Groth16 fullProve() via snarkjs ──────────────────────
       const tProve0 = nowMs();
       const { proof, publicSignals } = await snarkjs.groth16.fullProve(
         { secret: secretField.toString(), nonce: nonceField.toString() },
@@ -264,7 +322,6 @@ async function main() {
       trial.proofSizeBytes = byteLength(proofPayload.proof);
       trial.requestPayloadBytes = byteLength(proofPayload);
 
-      // ── Phase 4: submit proof, real server-side groth16.verify() ──────────
       const verifyRes = await httpJson(`${API_BASE}/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -300,30 +357,13 @@ async function main() {
     }
   }
 
-  // ── Write CSV ────────────────────────────────────────────────────────────
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const csvPath = path.join(__dirname, `results_${timestamp}.csv`);
-  const csvHeaders = [
-    'trial', 'success', 'challengeMs', 'poseidonMs', 'proveMs', 'verifyMs', 'totalE2eMs',
-    'challengeResponseBytes', 'proofSizeBytes', 'requestPayloadBytes', 'verifyResponseBytes',
-    'verifyStatus', 'error', 'errorDetail',
-  ];
-  const csvLines = [csvHeaders.join(',')];
-  for (const r of rows) {
-    csvLines.push(csvHeaders.map((h) => {
-      const v = r[h];
-      if (v === undefined || v === null) return '';
-      if (typeof v === 'string' && v.includes(',')) return `"${v.replace(/"/g, '""')}"`;
-      return v;
-    }).join(','));
-  }
-  fs.writeFileSync(csvPath, csvLines.join('\n'));
-
-  // ── Aggregate + write summary JSON ──────────────────────────────────────
+  // ── Aggregate ──────────────────────────────────────────────────────────────
   const successRows = rows.filter((r) => r.success);
   const failRows = rows.filter((r) => !r.success);
 
-  const summary = {
+  const result = {
+    fileFormatVersion: 1,
+    contributor: fingerprint,
     generatedAt: new Date().toISOString(),
     apiBase: API_BASE,
     trialsRequested: TRIALS,
@@ -353,58 +393,65 @@ async function main() {
     argon2idBaseline_ms: {
       note: 'Reference cost for traditional password-style auth, using this ' +
             'project\'s own production Argon2id parameters (memoryCost=65536 ' +
-            'KiB, timeCost=3, parallelism=1) from backend/.env. Not a full ' +
-            'OAuth/password round trip -- isolates the cryptographic hashing ' +
-            'cost specifically, which is the dominant cost in password auth.',
+            'KiB, timeCost=3, parallelism=1). Isolates the cryptographic ' +
+            'hashing cost specifically, which is the dominant cost in ' +
+            'password auth -- not a full OAuth/password round trip.',
       trials: ARGON2_TRIALS,
       hash: stats(argon2Times.map((t) => t.hashMs)),
       verify: stats(argon2Times.map((t) => t.verifyMs)),
       total: stats(argon2Times.map((t) => t.totalMs)),
     },
 
+    rawTrials: rows,
+
     methodologyNotes: [
       'All ZKP timings are from a REAL end-to-end pipeline: real Poseidon ' +
         '(circomlibjs), real Groth16 proof generation (snarkjs.groth16.fullProve ' +
-        'against the actual compiled auth.wasm/auth.zkey), and real HTTP round ' +
-        'trips to the actual running Express backend with real Postgres+Redis.',
+        'against the actual compiled auth.wasm/auth.zkey committed in this repo), ' +
+        'and real HTTP round trips to a real running Express backend with real ' +
+        'Postgres+Redis -- all running locally on the contributor\'s own machine.',
       'verifyServerRoundTrip (/auth/verify) INCLUDES an intentional ~50ms ' +
         '(+/-10ms jitter) artificial delay in backend/src/services/zkp/zkp.service.ts ' +
         '(constant TARGET_VERIFY_MS), added as a timing-attack mitigation (T14: ' +
         'prevents inferring user existence from response-time differences). ' +
         'This means verifyServerRoundTrip reflects (real verification cost + ' +
-        'security padding), not raw cryptographic verification cost alone. ' +
-        'Report this explicitly if comparing against systems without equivalent ' +
-        'timing-attack hardening.',
-      'groth16ProveLocal is measured on this benchmark machine (the developer ' +
-        'machine running this script), using Node.js snarkjs -- NOT measured on ' +
-        'the actual mobile device. Mobile proof generation (via the WebView/JS ' +
-        'bridge) has a separate, higher cost due to WebView startup and JS ' +
-        'engine overhead; benchmark that path separately on-device if the paper ' +
-        'needs mobile-specific numbers.',
-      'Rate limits (RATE_LIMIT_CHALLENGE_PER_MIN, RATE_LIMIT_AUTH_PER_MIN) were ' +
-        'temporarily raised in backend/.env.local (the file actually loaded by ' +
-        'npm run dev / start.sh) to permit rapid sequential trials; this does ' +
-        'not affect per-request latency or correctness, only the rate at ' +
-        'which trials could be run.',
+        'security padding), not raw cryptographic verification cost alone.',
+      'groth16ProveLocal is measured on the CONTRIBUTOR\'S machine (see the ' +
+        '"contributor" field above for hardware/OS) -- this is the whole point ' +
+        'of collecting from multiple devices. It is NOT measured on a mobile ' +
+        'device; mobile proof generation uses a separate WebView/JS bridge with ' +
+        'different overhead characteristics.',
+      'Rate limits were pre-raised in backend/.env.local (committed as ' +
+        '.env.local.example) specifically to permit rapid sequential ' +
+        'benchmark trials without 429 throttling; this does not affect ' +
+        'per-request latency or correctness.',
     ],
   };
 
-  const summaryPath = path.join(__dirname, `summary_${timestamp}.json`);
-  fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
-
-  console.log('\n─── Done ───────────────────────────────────────────────');
-  console.log(`Raw per-trial data: ${csvPath}`);
-  console.log(`Aggregated summary: ${summaryPath}`);
-  console.log(`\nSuccess rate: ${summary.successRatePct}% (${successRows.length}/${TRIALS})`);
-  if (failRows.length > 0) {
-    console.log('Failure breakdown:', summary.failureBreakdown);
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const resultsDir = path.join(__dirname, 'results');
+  if (!fs.existsSync(resultsDir)) {
+    fs.mkdirSync(resultsDir, { recursive: true });
   }
-  console.log('\nKey numbers:');
-  console.log('  Total E2E login latency (median):', summary.zkpLoginLatency_ms.totalEndToEnd.median, 'ms');
-  console.log('  Groth16 prove time (median):', summary.zkpLoginLatency_ms.groth16ProveLocal.median, 'ms');
-  console.log('  /auth/verify round trip (median):', summary.zkpLoginLatency_ms.verifyServerRoundTrip.median, 'ms');
-  console.log('  Proof object size (median):', summary.payloadSizes_bytes.groth16ProofObject.median, 'bytes');
-  console.log('  Argon2id baseline (median):', summary.argon2idBaseline_ms.total.median, 'ms');
+  const outPath = path.join(resultsDir, `zkauth-benchmark-${SAFE_NAME}-${dateStr}.json`);
+  fs.writeFileSync(outPath, JSON.stringify(result, null, 2));
+
+  console.log('\n═══════════════════════════════════════════════════════════');
+  console.log('  DONE');
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log(`\n  Output file: ${outPath}`);
+  console.log('\n  >>> Send this ONE file back via WhatsApp/email. <<<\n');
+  console.log(`  Success rate: ${result.successRatePct}% (${successRows.length}/${TRIALS})`);
+  if (failRows.length > 0) {
+    console.log('  Failure breakdown:', result.failureBreakdown);
+  }
+  console.log('\n  Key numbers:');
+  console.log('    Total E2E login latency (median):', result.zkpLoginLatency_ms.totalEndToEnd.median, 'ms');
+  console.log('    Groth16 prove time (median):     ', result.zkpLoginLatency_ms.groth16ProveLocal.median, 'ms');
+  console.log('    /auth/verify round trip (median):', result.zkpLoginLatency_ms.verifyServerRoundTrip.median, 'ms');
+  console.log('    Proof object size (median):      ', result.payloadSizes_bytes.groth16ProofObject.median, 'bytes');
+  console.log('    Argon2id baseline (median):      ', result.argon2idBaseline_ms.total.median, 'ms');
+  console.log('');
 }
 
 main().catch((err) => {
