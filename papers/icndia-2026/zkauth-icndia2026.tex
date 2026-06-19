@@ -922,7 +922,8 @@ measurements use production parameters (memoryCost = 65,536\,KiB, timeCost
 
 \textit{Environment note:} The Node.js benchmark represents server-side
 and headless proving. Browser WASM ($n=30$, Chrome, Web Worker) and mobile
-WebView ($n=15$, Samsung Galaxy S23, Android) measurements are also reported.
+WebView measurements on two Android devices (Samsung Galaxy S23, $n=15$;
+Samsung Galaxy Tab S9 FE+, $n=15$) are also reported.
 
 \textit{LSTM note:} Table~\ref{tab:lstm_perf} reflects evaluation on the
 Balabit Mouse Dynamics dataset; results are reported in Section~\ref{sec:results}.
@@ -937,7 +938,7 @@ JIT compilation of the WASM witness calculator and is retained for transparency.
 \begin{table}[!t]
 \renewcommand{\arraystretch}{1.25}
 \caption{ZKP Proof Generation Across Environments (Apple M4 server/browser,
-Samsung Galaxy S23 mobile, snarkjs v0.7.4). Server verify includes 50\,ms
+two Android devices, snarkjs v0.7.4). Server verify includes 50\,ms
 T14 pad~\S\ref{sec:security}. $^\dagger$Raw local snarkjs; no HTTP/pad.
 $^\ddagger$Chrome Web Worker internal only.}
 \label{tab:zkp_perf}
@@ -959,8 +960,9 @@ Server verify       & 53.66 & 65.80 & 75.87 & 15.62 \\
 Browser prove (wall)            & 163.3 & 166.4 & 170.0 & 6.48 \\
 Browser prove (WASM)$^\ddagger$ & 151.1 & 153.4 & 156.8 & 3.13 \\
 \midrule
-\multicolumn{5}{l}{\textit{Auth circuit --- Android WebView, Samsung S23, $n=15$}} \\
-Mobile prove (wall)              & 236.0 & 254.0 & 419.0 & 42.4 \\
+\multicolumn{5}{l}{\textit{Auth circuit --- Android WebView, two devices}} \\
+Mobile prove, Galaxy S23 ($n{=}15$)        & 236.0 & 254.0 & 419.0 & 42.4 \\
+Mobile prove, Tab S9 FE+ ($n{=}15$)         & 295.0 & 361.0 & 603.0 & 67.1 \\
 \midrule
 \multicolumn{5}{l}{\textit{Disclosure circuit (depth-8 Merkle + GTE) --- Node.js, $n=30$}} \\
 Disclosure prove    & 167.07 & 172.97 & 180.87 & 24.71 \\
@@ -1136,16 +1138,24 @@ Browser WASM proof generation (Chrome, Web Worker) measures 153.4\,ms median
 attributable to Chrome's renderer-process WASM JIT tier being less aggressive
 than Node.js V8's standalone WASM compiler; the distribution is remarkably
 stable ($\sigma=3.1$\,ms), confirming consistent WASM scheduling.
-On mobile, a Samsung Galaxy S23 running the same circuit inside a hidden
-WebView (Android Chromium engine) measures 254.0\,ms median wall-clock
-(p95: 419\,ms, $\sigma=42.4$\,ms, $n=15$, 100\% success) --- roughly
-1.7$\times$ slower than desktop Chrome and 4.1$\times$ slower than Node.js.
-The higher variance on mobile ($\sigma=42.4$\,ms vs.\ 3.1--6.5\,ms desktop)
-reflects thermal throttling and background-process scheduling typical of
-mobile SoCs under sustained WASM workloads, alongside the additional
-Dart$\leftrightarrow$JavaScript bridge overhead inherent to the WebView
-architecture. Even at this upper bound, total mobile login latency remains
-under half a second --- acceptable for an authentication event.
+On mobile, the same circuit running inside a hidden WebView (Android
+Chromium engine) shows hardware-dependent variation: a Samsung Galaxy S23
+(flagship SoC) measures 254.0\,ms median wall-clock (p95: 419\,ms,
+$\sigma=42.4$\,ms, $n=15$), while a Samsung Galaxy Tab S9 FE+ (mid-tier
+tablet SoC, Android 16) measures 361.0\,ms median (p95: 603\,ms,
+$\sigma=67.1$\,ms, $n=15$) --- both 100\% success. The S23 is roughly
+1.7$\times$ slower than desktop Chrome and 4.1$\times$ slower than Node.js;
+the tablet is 1.4$\times$ slower again than the S23, consistent with its
+lower-tier mobile SoC. The higher variance on both mobile devices
+($\sigma=42$--67\,ms vs.\ 3--6.5\,ms desktop) reflects thermal throttling
+and background-process scheduling typical of mobile SoCs under sustained
+WASM workloads, alongside the additional Dart$\leftrightarrow$JavaScript
+bridge overhead inherent to the WebView architecture. Even at the slower
+device's upper bound (603\,ms), total mobile login latency remains under
+one second --- acceptable for an authentication event, though the
+hardware-dependent spread (254--361\,ms median) suggests production
+deployments should budget for device-tier variance in UX design (e.g.,
+progress indicators for proving operations exceeding 200\,ms).
 Step-up re-authentication overhead is paid only when LSTM anomaly detection
 fires, making the ZKP cost budget independent of session activity in the
 common case.
@@ -1229,8 +1239,8 @@ AUC-ROC 0.816 and FAR 6.15\% at the 0.75 threshold, providing continuous
 session assurance as a defense-in-depth layer.
 
 Future work includes: multi-modal behavioral training incorporating keyboard
-and scroll telemetry alongside mouse dynamics; additional cross-device mobile
-benchmarking (varied SoCs, iOS WKWebView); circuit optimization for reduced
+and scroll telemetry alongside mouse dynamics; iOS WKWebView benchmarking to
+complete cross-platform mobile coverage; circuit optimization for reduced
 proving latency; hardware security key integration for registration secret
 storage; and threshold multi-party ZKP signing for organizational credentials.
 

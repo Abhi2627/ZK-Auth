@@ -1,0 +1,38 @@
+{
+  "benchmarkType": "mobile-webview-groth16",
+  "generatedAt": "2026-06-19T11:54:16.636020",
+  "device": "android",
+  "deviceModel": "Samsung Galaxy Tab S9 FE+ (SM-X610)",
+  "androidVersion": "Android 16 (API 36)",
+  "trials": 15,
+  "successCount": 15,
+  "initMs": 415,
+  "proveTimeWall_ms": {
+    "n": 15,
+    "mean": 370.1,
+    "median": 361.0,
+    "stddev": 67.1,
+    "min": 295.0,
+    "max": 603.0,
+    "p95": 603.0,
+    "p99": 603.0
+  },
+  "methodologyNote": "wallMs = Dart Stopwatch around GrothProver.generateProof(), covering snarkjs.groth16.fullProve() inside the hidden WebView plus JS bridge (postMessage) overhead both ways. Circuit artifacts loaded as in-memory Uint8Arrays from Flutter assets. initMs (WebView setup + asset loading) excluded from prove times.",
+  "rawTrials": [
+    {"trial":1,"wallMs":603,"status":"ok"},
+    {"trial":2,"wallMs":372,"status":"ok"},
+    {"trial":3,"wallMs":393,"status":"ok"},
+    {"trial":4,"wallMs":361,"status":"ok"},
+    {"trial":5,"wallMs":382,"status":"ok"},
+    {"trial":6,"wallMs":363,"status":"ok"},
+    {"trial":7,"wallMs":335,"status":"ok"},
+    {"trial":8,"wallMs":343,"status":"ok"},
+    {"trial":9,"wallMs":376,"status":"ok"},
+    {"trial":10,"wallMs":376,"status":"ok"},
+    {"trial":11,"wallMs":355,"status":"ok"},
+    {"trial":12,"wallMs":295,"status":"ok"},
+    {"trial":13,"wallMs":326,"status":"ok"},
+    {"trial":14,"wallMs":324,"status":"ok"},
+    {"trial":15,"wallMs":347,"status":"ok"}
+  ]
+}
