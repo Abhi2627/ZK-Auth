@@ -18,6 +18,7 @@ import { issuerRouter }        from './routes/issuer.routes.js';
 import { verifierRouter }      from './routes/verifier.routes.js';
 import { verifyRequestRouter, issuanceRouter } from './routes/verifyRequest.routes.js';
 import { platformRouter }      from './routes/platform.routes.js';
+import { oauthRouter }          from './routes/oauth.routes.js';
 
 export function createApp(): Express {
   const app = express();
@@ -85,6 +86,9 @@ export function createApp(): Express {
 
   // Platform: Institute onboarding
   app.use('/api/platform',  platformRouter);
+
+  // OAuth 2.0 Authorization Code flow (ZKP-backed) — relying-party delegation layer
+  app.use('/oauth', oauthRouter);
 
   // Phase 11: Remote verification requests + issuance history
   app.use('/api/v1/verify-request', verifyRequestRouter);

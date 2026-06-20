@@ -1,0 +1,76 @@
+// =============================================================================
+// OAuth 2.0 Authorization Code Flow — additions to schema.prisma
+//
+// Paste these models into the existing `auth` schema block.
+// Architectural note: ZK-Auth is NOT a pure-ZKP system. It is an
+// OAuth 2.0 Authorization Server in which the "user authenticates" step of
+// the standard Authorization Code flow is implemented via the Groth16 ZKP
+// challenge/verify protocol (ZkpChallenge + Nullifier, already defined above)
+// instead of a password form. This mirrors the "Sign in with Apple" pattern,
+// where OAuth/OIDC governs relying-party delegation (who is asking, what
+// scope, where to redirect) while a non-password authenticator (Face ID /
+// Touch ID there; a Groth16 proof here) governs the actual identity check.
+//
+// Relationship to existing models:
+//   - OAuthClient replaces the in-memory DEMO_VERIFIER_KEYS map in
+//     verifier.routes.ts with a persisted, hashed-secret client registry.
+//   - OAuthAuthorizationCode.userId references the SAME User who completed
+//     the ZKP challenge/verify flow — the code is only minted after
+//     sessionService.issue() would have succeeded, i.e. after a valid,
+//     non-replayed Groth16 proof.
+//   - Access/refresh tokens issued at the /oauth/token step reuse the
+//     existing Session model and SessionService — no separate token store.
+// =============================================================================
+
+// ─── OAuth Clients (registered relying parties) ───────────────────────────────
+// Replaces the hardcoded DEMO_VERIFIER_KEYS map. Each relying party (bank,
+// employer, verifier portal) registers once via the platform and receives a
+// client_id + client_secret pair, analogous to Institute registration but
+// scoped specifically to OAuth delegation rather than credential issuance.
+model OAuthClient {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId         String   @unique @map("client_id")           // public identifier, e.g. "acme_hr_portal"
+  clientSecretHash String   @map("client_secret_hash")          // SHA-256(client_secret) — raw secret shown once
+  name             String                                       // display name, e.g. "Acme Corp HR Portal"
+  redirectUris     String[] @map("redirect_uris")                // allow-list, exact match required
+  scopes           String[] @default(["openid", "profile"]) @map("scopes")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  authorizationCodes OAuthAuthorizationCode[]
+
+  @@index([clientId])
+  @@map("oauth_clients")
+  @@schema("auth")
+}
+
+// ─── OAuth Authorization Codes ────────────────────────────────────────────────
+// Short-lived, single-use codes minted at the end of a SUCCESSFUL ZKP
+// challenge/verify exchange (see OAuthService.issueAuthorizationCode, called
+// from the same control-flow point where sessionService.issue() is normally
+// invoked in postVerify). The code itself carries no session privileges; it
+// is only exchangeable once, at /oauth/token, for an access token scoped to
+// the requesting client.
+model OAuthAuthorizationCode {
+  code         String      @id                                   // opaque random string (not a JWT)
+  clientId     String      @map("client_id") @db.Uuid
+  userId       String      @map("user_id") @db.Uuid
+  redirectUri  String      @map("redirect_uri")                  // must match exactly at /oauth/token
+  scope        String                                             // space-delimited, subset of client.scopes
+  state        String?                                            // CSRF token echoed back to the client
+  codeChallenge       String?  @map("code_challenge")             // PKCE (S256) — optional, recommended for public clients
+  codeChallengeMethod String?  @map("code_challenge_method")
+  nullifierHash String     @map("nullifier_hash")                 // links the code to the specific ZKP proof that authorized it
+  isUsed       Boolean     @default(false) @map("is_used")
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt    DateTime    @map("expires_at") @db.Timestamptz      // now() + 60 seconds — RFC 6749 recommends short TTL
+
+  // Relations
+  client       OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([expiresAt])
+  @@map("oauth_authorization_codes")
+  @@schema("auth")
+}

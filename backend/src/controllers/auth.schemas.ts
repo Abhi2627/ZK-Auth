@@ -84,6 +84,26 @@ export const verifyRequestSchema = z
     public_signals: z
       .tuple([hexFieldElementSchema, hexFieldElementSchema, hexFieldElementSchema])
       .describe('Must be exactly [nullifier_hash, commitment_root, nonce] — matches auth.circom public signal order'),
+    /**
+     * Optional: present only when this proof submission is the
+     * "user authenticates" step of an OAuth 2.0 Authorization Code flow.
+     * This is the exact object returned as `oauth_context` by
+     * GET /oauth/authorize — the frontend round-trips it unmodified.
+     * When present, postVerify() mints an OAuth authorization code instead
+     * of issuing a session directly (see oauth.service.ts).
+     */
+    oauth_context: z
+      .object({
+        clientDbId: uuidSchema,
+        redirectUri: z.string().url(),
+        scope: z.string(),
+        state: z.string().optional(),
+        codeChallenge: z.string().optional(),
+        codeChallengeMethod: z.string().optional(),
+        clientId: z.string(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

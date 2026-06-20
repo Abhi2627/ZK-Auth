@@ -41,6 +41,7 @@ import { nullifierService }    from '../services/zkp/nullifier.service.js';
 import { zkpService }          from '../services/zkp/zkp.service.js';
 import { sessionService }      from '../services/session/session.service.js';
 import { recoveryService }     from '../services/auth/recovery.service.js';
+import { oauthService, type ValidatedAuthorizeRequest } from '../services/oauth/oauth.service.js';
 import {
   parseBody,
   challengeRequestSchema,
@@ -266,6 +267,39 @@ export async function postVerify(
       userId:         verifyResult.userId,
       challengeId:    challenge_id,
     });
+
+    // ── OAuth branch ─────────────────────────────────────────────────────
+    // If this proof was submitted as part of an OAuth Authorization Code
+    // flow (the frontend attaches the oauth_context returned by
+    // GET /oauth/authorize to the /auth/verify body), mint a short-lived
+    // authorization code bound to this proof's nullifier instead of issuing
+    // a session directly. The relying party redeems the code at
+    // POST /oauth/token, which is where sessionService.issue() actually
+    // runs for OAuth-originated logins. This is the one branch point where
+    // ZK-Auth's "OAuth 2.0 + ZKP" architecture diverges from the direct
+    // (non-OAuth) login path below.
+    const oauthContext = (body as { oauth_context?: ValidatedAuthorizeRequest }).oauth_context;
+    if (oauthContext) {
+      const { code, state, redirectUri } = await oauthService.issueAuthorizationCode({
+        validated: oauthContext,
+        userId: verifyResult.userId,
+        nullifierHash: verifyResult.nullifierHash,
+      });
+
+      logger.info(
+        { userId: verifyResult.userId, clientId: oauthContext.clientId },
+        'Authentication successful — OAuth authorization code issued',
+      );
+
+      res.status(200).json({
+        flow: 'oauth_authorization_code',
+        code,
+        state,
+        redirect_uri: redirectUri,
+        message: 'Redirect the user to `${redirect_uri}?code=${code}&state=${state}`.',
+      });
+      return;
+    }
 
     // Extract device context from headers
     const deviceFingerprint = req.headers['x-device-fingerprint'] as string | undefined;

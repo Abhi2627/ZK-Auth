@@ -17,6 +17,14 @@ export const ErrorCode = {
   TOKEN_REVOKED: 'TOKEN_REVOKED',
   STEP_UP_REQUIRED: 'STEP_UP_REQUIRED',
 
+  // OAuth 2.0 (RFC 6749 §5.2 error codes, reused where they match)
+  INVALID_CLIENT: 'invalid_client',
+  INVALID_GRANT: 'invalid_grant',
+  INVALID_REQUEST: 'invalid_request',
+  UNAUTHORIZED_CLIENT: 'unauthorized_client',
+  UNSUPPORTED_GRANT_TYPE: 'unsupported_grant_type',
+  INVALID_SCOPE: 'invalid_scope',
+
   // Credential
   CREDENTIAL_NOT_FOUND: 'CREDENTIAL_NOT_FOUND',
   CREDENTIAL_REVOKED: 'CREDENTIAL_REVOKED',
