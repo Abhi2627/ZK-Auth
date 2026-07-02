@@ -3,6 +3,9 @@ node_modules/
 .pnp
 .pnp.js
 
+# circom include symlink (points to root node_modules; local build aid only)
+backend/circuits/node_modules
+
 # Build outputs
 dist/
 build/
