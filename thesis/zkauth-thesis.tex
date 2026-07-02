@@ -14,7 +14,7 @@
 \usepackage{setspace}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
-\usepackage{tocloft}
+\usepackage[titles]{tocloft}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{array}
@@ -33,15 +33,24 @@
 \usepackage{float}
 
 % ─── Page geometry ────────────────────────────────────────────────────────────
-\geometry{a4paper,top=1in,bottom=1in,left=1.5in,right=1in,headheight=15pt}
+% As per rule: Top, Bottom, Right = 25mm. Left = 35mm.
+\geometry{a4paper,top=25mm,bottom=25mm,left=35mm,right=25mm,headheight=15pt}
 
-% ─── Spacing ──────────────────────────────────────────────────────────────────
+% ─── Spacing and Paragraphs ───────────────────────────────────────────────────
 \onehalfspacing
+% As per rule: indent 12mm, approx 2.5 line spacing between paragraphs
+\setlength{\parindent}{12mm}
+\setlength{\parskip}{1.5em}
+% Force LaTeX to break lines rather than overflow into the right margin
+% when no good break point is found (long compound words, identifiers,
+% chapter/section titles, etc.)
+\sloppy
+\setlength{\emergencystretch}{3em}
 
 % ─── Hyperref ─────────────────────────────────────────────────────────────────
 \hypersetup{colorlinks=true,linkcolor=black,citecolor=black,
   urlcolor=blue!60!black,
-  pdftitle={ZK-Auth Thesis},pdfauthor={Abhay Dandge}}
+  pdftitle={Zero-Knowledge Proof-Based Authentication Framework for Cloud Computing},pdfauthor={Abhay Dandge}}
 
 % ─── Header/Footer ────────────────────────────────────────────────────────────
 \pagestyle{fancy}
@@ -58,13 +67,19 @@
 \renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
 
 % ─── Initial Chapter/section format ───────────────────────────────────────────
+% Numbered Chapters: "Chapter X", title in ALL CAPS, with line below.
+% [display] shape stacks the Chapter~N label above the title and wraps
+% the title within \textwidth automatically, preventing right-margin overflow.
 \titleformat{\chapter}[display]
-  {\normalfont\Large\bfseries\raggedleft}{CHAPTER~\thechapter}{12pt}{\large\MakeUppercase}
+  {\normalfont\Large\bfseries}{Chapter~\thechapter}{12pt}{\large\MakeUppercase}[\vspace{1ex}\titlerule]
 \titlespacing*{\chapter}{0pt}{-10pt}{30pt}
 
+% Unnumbered Chapters (Contents, List of Figures, Abstract, etc.): Normal case, with line below
 \titleformat{name=\chapter,numberless}[block]
-  {\normalfont\Large\bfseries\raggedleft}{}{0pt}{\large\MakeUppercase}
+  {\normalfont\Large\bfseries}{}{0pt}{\large}[\vspace{1ex}\titlerule]
+\titlespacing*{name=\chapter,numberless}{0pt}{-10pt}{30pt}
 
+% Sections and Subsections: Normal case, smaller fonts
 \titleformat{\section}{\normalfont\large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
 
@@ -109,12 +124,10 @@
 %------------------------------------------------------------------------------
 % TITLE PAGE
 %------------------------------------------------------------------------------
-\begin{titlepage}
-\vspace*{\fill}
+\thispagestyle{empty}
 \begin{center}
 {\Large\bfseries
 ZERO-KNOWLEDGE PROOF-BASED AUTHENTICATION FRAMEWORK\\[4pt]
-WITH SELECTIVE DISCLOSURE AND BEHAVIORAL BIOMETRICS\\[4pt]
 FOR CLOUD COMPUTING
 }\\[0.6cm]
 \vfill
@@ -127,57 +140,60 @@ Submitted in partial fulfillment of the requirements for the award of degree of}
 {\large\bfseries ARTIFICIAL INTELLIGENCE}\\[0.4cm]
 \vfill
 {\normalsize\itshape Submitted by}\\[0.2cm]
+{\large\bfseries\texthindi{अभय दांडगे}}\\
 {\large\bfseries ABHAY DANDGE}\\[0.2cm]
 {\normalsize Scholar Number: \textbf{24215011117}}\\[0.4cm]
 \vfill
 {\normalsize\itshape Under the Guidance of}\\[0.2cm]
+{\large\bfseries\texthindi{डॉ. नमिता तिवारी}}\\
 {\normalsize\bfseries Dr.~Namita Tiwari}\\
 {\normalsize Assistant Professor, Department of CSE, MANIT Bhopal}\\[0.2cm]
+{\large\bfseries\texthindi{डॉ. मीनू चावला}}\\
 {\normalsize\bfseries Dr.~Meenu Chawla}\\
 {\normalsize Professor, Department of CSE, MANIT Bhopal}\\[0.5cm]
 \vfill
 \includegraphics[width=2.5cm]{manit_logo.png}\\[0.2cm]
-{\normalsize\bfseries Centre of Artificial Intelligence}\\[0.2cm]
+{\large\bfseries\texthindi{कृत्रिम बुद्धिमत्ता केंद्र}}\\[0.1cm]
+{\normalsize\bfseries Centre Of Artificial Intelligence}\\[0.2cm]
+{\Large\bfseries\texthindi{मौलाना आज़ाद राष्ट्रीय प्रौद्योगिकी संस्थान भोपाल}}\\[0.1cm]
 {\large\bfseries MAULANA AZAD NATIONAL INSTITUTE OF TECHNOLOGY BHOPAL}\\[0.1cm]
 {\normalsize\bfseries JULY 2026}
 \end{center}
-\vspace*{\fill}
-\end{titlepage}
+\clearpage
 
 %------------------------------------------------------------------------------
 % FRONT MATTER
 %------------------------------------------------------------------------------
-\clearpage
 \pagenumbering{roman}
-\setcounter{page}{2}
 
 % DECLARATION
-\clearpage
+\thispagestyle{empty}
 \phantomsection
 \addcontentsline{toc}{chapter}{Declaration}
 \begin{center}
+{\Large\bfseries\texthindi{मौलाना आज़ाद राष्ट्रीय प्रौद्योगिकी संस्थान भोपाल}}\\[0.1cm]
 {\large\bfseries MAULANA AZAD NATIONAL INSTITUTE OF TECHNOLOGY BHOPAL}\\[0.1cm]
 {\normalsize (An Institute of National Importance)}\\[0.1cm]
 {\normalsize Bhopal - 462003}\\[0.4cm]
 \includegraphics[width=2.5cm]{manit_logo.png}\\[0.4cm]
-{\normalsize\bfseries Centre of Artificial Intelligence}\\[0.6cm]
+{\large\bfseries\texthindi{कृत्रिम बुद्धिमत्ता केंद्र}}\\[0.1cm]
+{\normalsize\bfseries Centre Of Artificial Intelligence}\\[0.6cm]
 {\Large\bfseries\underline{Declaration}}
 \end{center}
 
 \vspace{0.5cm}
 \noindent I hereby declare that the work presented in the dissertation entitled
-\textbf{``Zero-Knowledge Proof-Based Authentication Framework with Selective
-Disclosure and Behavioral Biometrics for Cloud Computing''} is submitted in
+\textbf{``Zero-Knowledge Proof-Based Authentication Framework for Cloud
+Computing''} is submitted in
 partial fulfillment of the requirements for the award of the degree of
 \textbf{Masters of Technology} in \textbf{Artificial Intelligence}.
 It is an authentic documentation of my own original work carried out from
 July~2024 to July~2026 under the guidance of \textbf{Dr.~Namita Tiwari},
-Assistant Professor, and co-supervisor \textbf{Dr.~Meenu Chawla}, Professor,
+Assistant Professor, and \textbf{Dr.~Meenu Chawla}, Professor,
 Department of CSE, MANIT Bhopal.
 
 Wherever contributions of others are involved, every effort is made to indicate
-this clearly with due reference to the literature. The matter embodied in this
-dissertation has not been presented or submitted for any other degree.
+this clearly with due reference to the literature. The matter embodied in this dissertation has not been presented or submitted for any other degree.
 
 \vspace{2.5cm}
 \begin{flushright}
@@ -193,18 +209,19 @@ MANIT, Bhopal
 \phantomsection
 \addcontentsline{toc}{chapter}{Certificate}
 \begin{center}
+{\Large\bfseries\texthindi{मौलाना आज़ाद राष्ट्रीय प्रौद्योगिकी संस्थान भोपाल}}\\[0.1cm]
 {\large\bfseries MAULANA AZAD NATIONAL INSTITUTE OF TECHNOLOGY BHOPAL}\\[0.1cm]
 {\normalsize (An Institute of National Importance)}\\[0.1cm]
 {\normalsize Bhopal - 462003}\\[0.4cm]
 \includegraphics[width=2.5cm]{manit_logo.png}\\[0.4cm]
-{\normalsize\bfseries Centre of Artificial Intelligence}\\[0.6cm]
+{\large\bfseries\texthindi{कृत्रिम बुद्धिमत्ता केंद्र}}\\[0.1cm]
+{\normalsize\bfseries Centre Of Artificial Intelligence}\\[0.6cm]
 {\Large\bfseries\underline{Certificate}}
 \end{center}
 
 \vspace{0.5cm}
 \noindent This is to certify that the dissertation entitled \textbf{``Zero-Knowledge
-Proof-Based Authentication Framework with Selective Disclosure and Behavioral
-Biometrics for Cloud Computing''} submitted by \textbf{Abhay Dandge},
+Proof-Based Authentication Framework for Cloud Computing''} submitted by \textbf{Abhay Dandge},
 Scholar No.~24215011117, in partial fulfillment of the requirements for the
 degree of \textbf{Masters of Technology} in Artificial Intelligence, is an
 authentic work carried out under our supervision and guidance from
@@ -212,31 +229,22 @@ July~2024 to July~2026.
 
 \vspace{3cm}
 \noindent
-\begin{minipage}[t]{0.45\textwidth}
+\begin{minipage}[t]{0.46\textwidth}
 \rule{5.5cm}{0.4pt}\\[3pt]
 \textbf{Dr.~Namita Tiwari}\\
 Supervisor\\
 Assistant Professor, Dept. of CSE\\
 MANIT, Bhopal
-\end{minipage}
+\end{minipage}%
 \hfill
-\begin{minipage}[t]{0.45\textwidth}
+\begin{minipage}[t]{0.46\textwidth}
 \raggedleft
 \rule{5.5cm}{0.4pt}\\[3pt]
 \textbf{Dr.~Meenu Chawla}\\
-Co-supervisor\\
+Supervisor\\
 Professor, Dept. of CSE\\
 MANIT, Bhopal
 \end{minipage}
-
-
-% ─── Redefine Chapter Formats for Line Under Headings ─────────────────────────
-\titleformat{name=\chapter,numberless}[block]
-  {\normalfont\Large\bfseries\raggedleft}{}{0pt}{\large\MakeUppercase}[\vspace{1ex}\titlerule]
-
-\titleformat{\chapter}[display]
-  {\normalfont\Large\bfseries\raggedleft}{CHAPTER~\thechapter}{12pt}{\large\MakeUppercase}[\vspace{1ex}\titlerule]
-% ──────────────────────────────────────────────────────────────────────────────
 
 
 % ACKNOWLEDGEMENT
@@ -245,7 +253,7 @@ MANIT, Bhopal
 \addcontentsline{toc}{chapter}{Acknowledgement}
 
 I would like to begin by expressing my profound sense of gratitude towards my
-supervisor \textbf{Dr.~Namita Tiwari}, Assistant Professor, and co-supervisor
+supervisors \textbf{Dr.~Namita Tiwari}, Assistant Professor, and
 \textbf{Dr.~Meenu Chawla}, Professor, Department of CSE, MANIT Bhopal, for
 their valuable guidance, support, and encouragement throughout this research.
 Their readiness for consultation at all times, their educative comments, and
@@ -253,7 +261,8 @@ their constant concern for quality have been invaluable.
 
 I express my sincere gratitude to our Director, \textbf{Dr.~K.K.~Shukla}, for
 providing ample resources and a conducive research environment. I extend my
-thanks to \textbf{Dr.~R.K.~Pateriya}, Head of Department of CSE, for
+thanks to \textbf{Dr.~R.K.~Pateriya}, Head of Department of CSE, and
+\textbf{Dr.~D.S.~Tomar}, Head of the Centre Of Artificial Intelligence, for
 administrative support and for providing access to departmental laboratories.
 
 I am grateful to my co-author \textbf{Sameeksha Prasad} for collaborative
@@ -297,13 +306,13 @@ The architecture supports multi-tenant institutional issuance via Ed25519 signin
 \addcontentsline{toc}{chapter}{Abstract (Hindi)}
 
 \begin{hindi}
-क्लाउड परिवेशों में प्रमाणीकरण सुरक्षा अब भी एक गंभीर भेद्यता बनी हुई है। पारंपरिक तंत्र—पासवर्ड, बहु-कारक प्रमाणीकरण (\textenglish{MFA}), और सार्वजनिक-कुंजी अवसंरचना (\textenglish{PKI})—एक ``\textenglish{verify-by-reveal}'' प्रतिमान पर निर्भर करते हैं। संवेदनशील क्रेडेंशियल्स को सत्यापनकर्ता द्वारा प्रेषित या संग्रहीत करना आवश्यक होता है, जिससे विशाल आक्रमण सतहें बनती हैं, जिनका डेटाबेस उल्लंघनों और क्रेडेंशियल स्टफिंग के माध्यम से अत्यधिक शोषण किया जा सकता है।
+क्लाउड परिवेशों में प्रमाणीकरण सुरक्षा अब भी एक गंभीर भेद्यता बनी हुई है। पारंपरिक तंत्र—पासवर्ड, बहु-कारक प्रमाणीकरण एमएफए, और सार्वजनिक-कुंजी अवसंरचना पीकेआई—एक प्रकट करके सत्यापित करें प्रतिमान पर निर्भर करते हैं। संवेदनशील क्रेडेंशियल्स को सत्यापनकर्ता द्वारा प्रेषित या संग्रहीत करना आवश्यक होता है, जिससे विशाल आक्रमण सतहें बनती हैं, जिनका डेटाबेस उल्लंघनों और क्रेडेंशियल स्टफिंग के माध्यम से अत्यधिक शोषण किया जा सकता है।
 
-यह शोधप्रबंध \textenglish{\textsc{ZK-Auth}} प्रस्तुत करता है, जो एक ऐसी क्रिप्टोग्राफिक अवसंरचना है जो ``\textenglish{verify-by-reveal}'' की समस्या का समाधान करती है। \textenglish{\textsc{ZK-Auth}} एक \textenglish{OAuth 2.0 Authorization Server} के रूप में कार्य करता है, जहाँ मानक पासवर्ड प्रमाणीकरण चरण को शून्य-ज्ञान प्रमाण (\textenglish{zero-knowledge proof}) द्वारा प्रतिस्थापित किया जाता है। इस डिज़ाइन को तीन मुख्य तंत्र साकार करते हैं। पहला, उपयोगकर्ता \textenglish{Groth16 zk-SNARKs} का उपयोग करते हुए, \textenglish{BN254} एलिप्टिक वक्र पर, \textenglish{WebAssembly} में संकलित प्रणाली के माध्यम से, केवल क्लाइंट-पक्ष पर पंजीकरण रहस्य (\textenglish{registration secret}) के ज्ञान का प्रमाण प्रस्तुत करते हैं। परिणामी प्रमाण एक अल्पकालिक \textenglish{OAuth} प्राधिकरण कोड को अधिकृत करता है। \textenglish{Poseidon} हैश-आधारित नलिफ़ायर्स (\textenglish{nullifiers}) एक साथ रिप्ले आक्रमणों को रोकते हैं।
+यह शोधप्रबंध जेडके-ऑथ प्रस्तुत करता है, जो एक ऐसी क्रिप्टोग्राफिक अवसंरचना है जो परकट करके सत्यापित करें की समस्या का समाधान करती है। जेडके-ऑथ एक \textenglish{OAuth 2.0} प्राधिकरण सर्वर के रूप में कार्य करता है, जहाँ मानक पासवर्ड प्रमाणीकरण चरण को शून्य-ज्ञान प्रमाण (शून्य-ज्ञान प्रमाण) द्वारा प्रतिस्थापित किया जाता है। इस डिज़ाइन को तीन मुख्य तंत्र साकार करते हैं। पहला, उपयोगकर्ता ग्रोथ16 \textenglish{zk-SNARKs} का उपयोग करते हुए, बीएन254 एलिप्टिक वक्र पर, वेबअसेंबली में संकलित प्रणाली के माध्यम से, केवल क्लाइंट-पक्ष पर पंजीकरण रहस्य (पंजीकरण गुप्त) के ज्ञान का प्रमाण प्रस्तुत करते हैं। परिणामी प्रमाण एक अल्पकालिक ओएथ प्राधिकरण कोड को अधिकृत करता है। \textenglish{Poseidon} हैश-आधारित नलिफ़ायर्स (निरस्त करने वाले) एक साथ रिप्ले आक्रमणों को रोकते हैं।
 
-दूसरा, चयनात्मक क्रेडेंशियल प्रकटीकरण (\textenglish{selective credential disclosure}) गहराई-8 \textenglish{Poseidon Merkle} वृक्षों के माध्यम से प्राप्त किया जाता है, जिन्हें \textenglish{W3C Verifiable Credentials} के साथ एकीकृत किया गया है। धारक कच्चे गुण मानों (\textenglish{raw attribute values}) को उजागर किए बिना व्यक्तिगत गुण-आधारित विधेयों (जैसे, आयु $\geq$ 18) का प्रमाण प्रस्तुत करते हैं। तीसरा, \textenglish{\textsc{ZK-Auth}} एक द्वि-स्तरीय \textenglish{LSTM} व्यवहारिक बायोमेट्रिक मॉडल को सम्मिलित करता है, जो उपयोगकर्ता टेलीमेट्री से प्राप्त पृष्ठभूमि सत्र-जोखिम स्कोरिंग प्रदान करता है और असामान्य व्यवहार का पता चलने पर उन्नत पुनः-प्रमाणीकरण (\textenglish{step-up re-authentication}) को सक्रिय करता है।
+दूसरा, चयनात्मक क्रेडेंशियल प्रकटीकरण (चयनात्मक क्रेडेंशियल प्रकटीकरण) गहराई-8 पोसाइडन मर्कले वृक्षों के माध्यम से प्राप्त किया जाता है, जिन्हें \textenglish{W3C} सत्यापन योग्य क्रेडेंशियल के साथ एकीकृत किया गया है। धारक कच्चे गुण मानों (कच्ची विशेषता मान) को उजागर किए बिना व्यक्तिगत गुण-आधारित विधेयों (जैसे, आयु $\geq$ 18) का प्रमाण प्रस्तुत करते हैं। तीसरा, जेडके-ऑथ एक द्वि-स्तरीय एलएसटीएम व्यवहारिक बायोमेट्रिक मॉडल को सम्मिलित करता है, जो उपयोगकर्ता टेलीमेट्री से प्राप्त पृष्ठभूमि सत्र-जोखिम स्कोरिंग प्रदान करता है और असामान्य व्यवहार का पता चलने पर उन्नत पुनः-प्रमाणीकरण (स्टेप-अप पुनः प्रमाणीकरण) को सक्रिय करता है।
 
-यह वास्तुकला \textenglish{Ed25519} हस्ताक्षर कुंजी-युग्मों (\textenglish{signing keypairs}) के माध्यम से बहु-किरायेदार (\textenglish{multi-tenant}) संस्थागत निर्गमन का समर्थन करती है। \textenglish{\textsc{ZK-Auth}} को पूर्णतः कार्यान्वित किया गया है और \textenglish{Node.js}, \textenglish{Chrome} तथा दो \textenglish{Android} उपकरणों पर मूल्यांकित किया गया है। यह 132.5 मिलीसेकंड की माध्य अंत-से-अंत प्रमाणीकरण विलंबता प्राप्त करता है—जो \textenglish{Argon2id} पासवर्ड-हैशिंग आधाररेखा की तुलना में 23\% तेज़ है—और इसका प्रमाण आकार 723 बाइट है। व्यवहारिक बायोमेट्रिक उपप्रणाली, जिसे सार्वजनिक \textenglish{Balabit Mouse Dynamics} डेटासेट पर मूल्यांकित किया गया, 0.816 का \textenglish{AUC-ROC} तथा 6.15\% की गलत-स्वीकृति दर (\textenglish{false-acceptance rate}) प्राप्त करती है। यह शून्य-\textenglish{PII} वास्तुकला भारत के \textenglish{DPDP} अधिनियम 2023 तथा \textenglish{GDPR} के साथ संरचनात्मक रूप से अनुपालन करती है।
+यह वास्तुकला \textenglish{Ed25519} हस्ताक्षर कुंजी-युग्मों (कुंजी युग्मों पर हस्ताक्षर करना) के माध्यम से बहु-किरायेदार (बहु-किरायेदार) संस्थागत निर्गमन का समर्थन करती है। जेडके-ऑथ को पूर्णतः कार्यान्वित किया गया है और नोड.जेएस, करोम तथा दो एंड्रॉयड उपकरणों पर मूल्यांकित किया गया है। यह 132.5 मिलीसेकंड की माध्य अंत-से-अंत प्रमाणीकरण विलंबता प्राप्त करता है—जो आर्गन2आईडी पासवर्ड-हैशिंग आधाररेखा की तुलना में 23\% तेज़ है—और इसका प्रमाण आकार 723 बाइट है। व्यवहारिक बायोमेट्रिक उपप्रणाली, जिसे सार्वजनिक बालाबिट माउस डायनेमिक्स डेटासेट पर मूल्यांकित किया गया, 0.816 का एयूसी-आरओसी तथा 6.15\% की गलत-स्वीकृति दर (झूठी स्वीकृति दर) प्राप्त करती है। यह शून्य-पीआईआई वास्तुकला भारत के डीपीडीपी अधिनियम 2023 तथा जीडीपीआर के साथ संरचनात्मक रूप से अनुपालन करती है।
 \end{hindi}
 
 % TABLE OF CONTENTS / LISTS
@@ -389,131 +398,201 @@ ZK-STARK & Zero-Knowledge Scalable Transparent Argument of Knowledge \\
 \chapter{Introduction}
 %==============================================================================
 
-\section{Background and Motivation}
+\section{Overview}
 
-Cloud computing has transformed digital service delivery, with the global cloud
-market exceeding \$600 billion annually by 2024. However, the shift to cloud
-infrastructure introduces a critical security challenge: authenticating users in
-environments where the infrastructure is not under direct organizational control.
+This chapter introduces the problem this thesis addresses, the design
+philosophy behind \textsc{ZK-Auth}, and the structure of the remaining
+chapters. The discussion begins with why password-centric authentication
+is becoming difficult to defend at cloud scale, moves through the
+specific gaps in existing zero-knowledge authentication proposals, and
+ends with a summary of what this thesis contributes and how it is
+organised.
 
-Traditional authentication mechanisms---passwords, multi-factor authentication
-(MFA), and public key infrastructure (PKI)---were designed for environments where
-the authenticating server is trusted. In cloud deployments, this assumption often
-does not hold. The \textit{verify-by-reveal} paradigm requires credentials to be
-transmitted to or stored by the authenticating party, creating attack surfaces that
-cloud-scale breaches have repeatedly exploited. Password database breaches expose
-user credentials at scale; man-in-the-middle attacks intercept credentials in
-transit; credential stuffing leverages leaked databases across services.
+\section{Background}
 
-Zero-Knowledge Proofs (ZKPs) offer a mathematically rigorous resolution to this
-challenge. A ZKP allows a \textit{prover} to convince a \textit{verifier} that a
-statement is true without revealing any information beyond the truth of the
-statement~\cite{gmr89}. Applied to authentication, a user can prove knowledge of a
-registration secret without ever transmitting it---eliminating the primary attack
-surface of credential theft. The verifier receives a cryptographic proof that is
-sound (cannot be forged without knowledge of the secret) and zero-knowledge
-(reveals nothing about the secret).
+Cloud computing has transformed how digital services are delivered, with
+the global cloud market exceeding \$600 billion annually by 2024.
+Alongside this growth has come a harder security problem: how does a
+service authenticate a user when the infrastructure handling that
+authentication is not, in the traditional sense, under the service
+provider's direct physical control?
 
-Despite their theoretical appeal, ZKPs have seen limited adoption in practical
-authentication systems due to four challenges identified and addressed in this
-thesis.
+Most authentication systems in use today---passwords, multi-factor
+authentication (MFA), and public key infrastructure (PKI)---were designed
+for an earlier assumption: that the server checking a credential could be
+fully trusted with that credential. In a cloud deployment this assumption
+is weaker than it used to be. The result is what this thesis refers to as
+the \textit{verify-by-reveal} paradigm: to prove who you are, you hand
+over (or allow the server to store) something secret, and the server's
+job is to check it against a stored copy. Every large-scale credential
+breach in the last decade---from password database leaks to
+credential-stuffing campaigns that replay leaked passwords across
+unrelated services---traces back to this same underlying design choice.
 
-\textbf{Challenge 1 --- Proof complexity and cross-environment viability.}
-Proof generation is computationally intensive, requiring efficient circuit
-design and client-side execution within user-acceptable latency. Critically,
-this latency bound is rarely characterized across the realistic spread of
-client hardware (desktop browsers, flagship smartphones, mid-range tablets)
-that a real user population presents; most prior ZKP-authentication
-literature reports a single-environment benchmark only.
+Zero-Knowledge Proofs (ZKPs) offer a different answer. A ZKP lets a
+\textit{prover} convince a \textit{verifier} that a statement is true
+without revealing anything else about why it is true~\cite{gmr89}.
+Applied to login, this means a user can prove they know a secret without
+ever sending that secret anywhere. If the server's database is breached,
+there is no secret in it to steal.
 
-\textbf{Challenge 2 --- Attribute-level privacy.} Authentication in real
-deployments requires proving specific \textit{attributes} of identity with
-selective revelation---a capability basic ZKP authentication does not
-provide.
+\section{Topic Introduction}
 
-\textbf{Challenge 3 --- Session continuity.} One-time authentication proofs
-cannot protect against session hijacking; continuous identity assurance
-mechanisms are required throughout a session lifetime, and these mechanisms
-must themselves be evaluated against authentic (not synthetic) behavioral
-data to be credible.
+\textsc{ZK-Auth}, the system built and evaluated in this thesis, is best
+understood as three smaller problems solved together rather than one big
+one. Each is introduced briefly here and developed in full in later
+chapters.
 
-\textbf{Challenge 4 --- Empirical and theoretical rigor.} Many published ZKP
-authentication systems either omit quantitative benchmarking entirely or
-provide only qualitative security claims without a constraint-level
-reduction tying the specific circuit design to the underlying proof
-system's guarantees.
+\subsection{Zero-Knowledge Authentication}
 
-This thesis presents \textsc{ZK-Auth}, a complete cryptographic authentication
-infrastructure addressing all four challenges in an integrated, empirically
-evaluated, and formally analyzed deployable system.
+The first problem is replacing the password check itself. \textsc{ZK-Auth}
+uses Groth16 zk-SNARKs over the BN254 elliptic curve, compiled from a
+Circom circuit to WebAssembly so the proof can be generated entirely on
+the user's device. The server never sees the secret, only a proof that
+the user knows it. This is described fully in Chapter~3.
 
-\section{Published Research Underpinning This Thesis}
+\subsection{Selective Attribute Disclosure}
 
-This thesis synthesizes and substantially extends two peer-reviewed publications
-produced during the M.Tech programme:
+The second problem is that real applications rarely need to know
+everything about a user---a liquor delivery app needs to know that a
+customer is over 18, not their exact birth date. \textsc{ZK-Auth}
+addresses this with depth-8 Poseidon Merkle trees, letting a credential
+holder prove a predicate about one attribute (age, nationality,
+membership tier) without revealing the attribute's value or any other
+attribute stored alongside it. This is covered in Chapter~4.
 
-\textbf{Publication 1~\cite{dandge2025zkpcloud}:} Dandge, A., Prasad, S., Tiwari,
-N., and Chawla, M. ``Zero-Knowledge Proof for Authentication in Cloud Computing:
-A Review.'' \textit{Springer Nature, FrontSci 2025}. This paper established the
-architectural taxonomy of ZKP deployment patterns for cloud authentication,
-compared ZKP families (zk-SNARKs, zk-STARKs, Bulletproofs, Sigma protocols) on
-cloud-specific performance parameters, and identified the performance-auditability
-tradeoff between stand-alone and ledger-anchored deployment. Table~\ref{tab:zkp_families}
-in Chapter~2 reproduces this paper's central comparative finding, which directly
-motivated the Groth16 design choice in \textsc{ZK-Auth}.
+\subsection{Continuous Session Assurance}
 
-\textbf{Publication 2~\cite{prasad2025abereview}:} Prasad, S., Dandge, A., Tiwari,
-N., and Chawla, M. ``A Comprehensive Review of Zero-Knowledge Proofs in
-Attribute-Based Encryption Frameworks.'' \textit{Accepted, ICNDIA 2026 (IEEE)}.
-This paper analyzed ZKP integration with ABE schemes for fine-grained access
-control, established performance bounds of polynomial commitment schemes (KZG),
-and identified hybrid ZKP models and hardware acceleration as critical research
-directions. The selective-disclosure design in Chapter~4 of this thesis draws
-directly on this paper's comparative analysis of ZK-compatible versus non-ZK
-disclosure mechanisms.
+The third problem is that authenticating once at login time says nothing
+about whether the same person is still in control of the session five
+minutes later. \textsc{ZK-Auth} layers a behavioral biometric model---an
+LSTM network watching mouse and keyboard telemetry---on top of the ZKP
+login, and forces a fresh proof whenever the model's risk score crosses a
+threshold. This is also covered in Chapter~4.
 
-Both publications surveyed the literature and proposed architectural
-recommendations; neither implemented or empirically evaluated a deployable
-system. This thesis closes that gap: it is the first work in this research
-programme to implement, deploy, and benchmark a complete ZKP-based
-authentication system across multiple real execution environments.
+\section{Motivation}
 
-\section{Problem Statement}
+Despite the theoretical appeal of zero-knowledge authentication, very few
+production systems use it, and the published research on the topic has
+left several gaps that motivated this work directly.
 
-Formally, the problem this thesis addresses can be stated as follows. Given
-a population of users $\mathcal{U}$ and a set of relying-party services
-$\mathcal{V}$, design an authentication protocol $\Pi$ such that:
+First, almost every prior ZKP-authentication paper benchmarks proof
+generation on a single machine---usually the author's own development
+laptop. This says little about whether the approach is workable for a
+real user base logging in from a mix of laptops, phones, and tablets.
+Second, plain ZKP authentication on its own does not let a verifier ask
+for anything less than full proof of identity; there is no native way to
+ask only "are you over 18" without exposing more. Third, a successful
+login proof is a point-in-time guarantee, and most ZKP-authentication
+work stops there, leaving session hijacking after login as an open
+problem. Fourth, much of the literature presents security arguments at
+the level of "Groth16 is secure, therefore our system is secure," without
+working through how the specific circuit used actually inherits that
+guarantee.
 
-\begin{enumerate}
-  \item For any user $u \in \mathcal{U}$ and verifier $v \in \mathcal{V}$,
-        $u$ can prove possession of a valid credential to $v$ without
-        transmitting any secret material that, if intercepted or stored by
-        $v$, would allow $v$ (or an attacker compromising $v$) to
-        impersonate $u$ to a different verifier $v' \in \mathcal{V}$.
-  \item $u$ can selectively disclose a predicate over a subset of identity
-        attributes (e.g., $\text{age}(u) \geq 18$) to $v$ without revealing
-        the underlying attribute value or any other attribute.
-  \item Once authenticated, $u$'s session can be continuously monitored for
-        anomalous behavior indicative of session hijacking, with a bounded
-        detection-to-remediation window, without requiring $u$ to
-        re-authenticate on every request.
-  \item The protocol $\Pi$ must be empirically demonstrated to operate
-        within human-acceptable latency bounds (conventionally,
-        sub-second response time for an authentication event) across the
-        realistic range of client execution environments, not solely under
-        idealized benchmark conditions.
-\end{enumerate}
+A fifth, more practical concern also shaped this thesis: an institution
+that already has OAuth-based login integrations with its partners cannot
+realistically rip that out to adopt a new authentication scheme. Most
+prior ZKP-authentication proposals implicitly assume they will replace
+the whole login stack, including the relying-party delegation layer that
+OAuth already provides. \textsc{ZK-Auth} takes a different position: it
+is built \textit{as} an OAuth~2.0 Authorization Server, and the only
+thing it changes is what happens during the password-entry step of
+OAuth's Authorization Code grant --- that step becomes a Groth16 proof
+instead of a password form. This is the same pattern used by
+``Sign in with Apple,'' which pairs OAuth/OIDC delegation with Face~ID or
+Touch~ID rather than a password. Section~\ref{sec:thesis_contributions}
+lists how this thesis addresses each of these five gaps directly.
 
-\textsc{ZK-Auth} is the system constructed to satisfy all four requirements
-simultaneously, and Chapters 3--5 of this thesis detail its design,
-implementation, and empirical validation against each requirement in turn.
+Table~\ref{tab:auth_paradigm_compare} summarises, at a glance, how the
+verify-by-reveal paradigm compares against the zero-knowledge approach
+taken in this thesis; Chapter~6 expands this into a full seven-system
+comparison with measured and literature-reported figures.
+
+\begin{table}[htbp]
+\renewcommand{\arraystretch}{1.2}
+\caption{Verify-by-Reveal vs.\ Zero-Knowledge Authentication}
+\label{tab:auth_paradigm_compare}
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Property} & \textbf{Verify-by-Reveal} & \textbf{Zero-Knowledge (ZK-Auth)} \\
+\midrule
+Secret leaves client      & Yes (password/hash) & Never \\
+Database breach impact    & Credentials exposed  & Only commitments exposed \\
+Replay resistance         & Requires extra design & Built into protocol (nullifiers) \\
+Attribute-level privacy   & Not native            & Native (Merkle predicates) \\
+Works within OAuth 2.0    & Yes                   & Yes (this thesis) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:verify_by_reveal_vs_zk} illustrates the structural
+difference between the two paradigms at the point where a credential
+would normally be transmitted.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=1.3cm, auto, thick]
+  \node[block, fill=red!8, text width=3.2cm] (pwd) {User enters\\password};
+  \node[block, fill=red!8, text width=3.2cm, right=of pwd] (server1) {Server stores\\password hash};
+  \node[block, fill=red!15, text width=3.2cm, right=of server1] (breach) {Breach exposes\\crackable hash};
+  \draw[->, thick] (pwd) -- (server1);
+  \draw[->, thick] (server1) -- (breach);
+
+  \node[block, fill=green!8, text width=3.2cm, below=1.6cm of pwd] (secret) {Secret stays\\on client};
+  \node[block, fill=green!8, text width=3.2cm, right=of secret] (proof) {Client sends\\ZKP only};
+  \node[block, fill=green!15, text width=3.2cm, right=of proof] (safe) {Breach exposes\\nothing usable};
+  \draw[->, thick] (secret) -- (proof);
+  \draw[->, thick] (proof) -- (safe);
+\end{tikzpicture}
+\caption{Verify-by-reveal (top) vs.\ zero-knowledge authentication (bottom).}
+\label{fig:verify_by_reveal_vs_zk}
+\end{figure}
+
+\section{Significance of the Study}
+
+This work matters beyond its immediate technical contributions for three
+concrete reasons. First, the regulatory landscape for personal data is
+tightening: India's Digital Personal Data Protection Act 2023 and the
+EU's GDPR both penalize unnecessary collection and storage of personal
+data, and a system that authenticates users without ever storing a
+usable secret is, by construction, easier to bring into compliance than
+one built on conventional password storage. Second, credential-theft
+remains one of the most common root causes of large-scale breaches
+year after year; an authentication primitive that removes the stored
+secret entirely removes that root cause rather than mitigating its
+symptoms. Third, most prior academic proposals in this space stop at a
+working prototype evaluated on a single machine; this thesis instead
+treats cross-environment deployability, ablation-justified design
+choices, and a formal security reduction as first-class deliverables,
+so that the result is closer to something an engineering team could
+actually adopt than a proof-of-concept confined to a research paper.
+
+The practical audience for this work includes cloud service providers
+evaluating alternatives to password-based login, identity-platform
+teams exploring privacy-preserving authentication, and researchers
+working on the intersection of zero-knowledge cryptography and applied
+systems security. The OAuth-compatibility design choice
+(Section~\ref{sec:oauth_zkp}) specifically targets the first group:
+an institution does not need to discard its existing relying-party
+integrations to adopt the approach described here.
 
 \section{Research Contributions}
+\label{sec:thesis_contributions}
+
+This thesis presents \textsc{ZK-Auth}, a complete cryptographic
+authentication infrastructure addressing the gaps identified above in an
+integrated, empirically evaluated, and formally analysed system. The
+specific contributions are:
 
 \begin{enumerate}
   \item \textbf{ZK-Auth System:} A complete implementation of Groth16 zk-SNARK
         authentication over BN254 using Circom-compiled circuits, deployed as
-        browser-executable WebAssembly with Node.js server-side verification.
+        browser-executable WebAssembly with Node.js server-side verification,
+        wrapped in a working OAuth~2.0 Authorization Code flow with PKCE so
+        the proof substitutes only for the password-entry step rather than
+        for OAuth's relying-party delegation layer.
 
   \item \textbf{Poseidon Merkle Selective Disclosure:} A depth-8 Poseidon Merkle
         tree commitment scheme for W3C VC selective attribute disclosure supporting
@@ -542,6 +621,11 @@ implementation, and empirical validation against each requirement in turn.
         full measured hardware spread, together with a formal extraction-based
         soundness reduction tying the specific Poseidon-bound circuit
         constraints to Groth16's generic-group guarantees.
+
+  \item \textbf{Baseline Comparison:} A seven-paradigm comparison (Password,
+        MFA, PKI, pure OAuth, SAML, WebAuthn, and behavioral-biometric-only
+        systems) combining qualitative feature analysis with
+        literature-reported quantitative figures (Chapter~6).
 \end{enumerate}
 
 \section{Scope and Delimitations}
@@ -570,7 +654,7 @@ implementation, and empirical validation against each requirement in turn.
         simultaneous multi-tenant traffic; this is scoped as future work.
 \end{enumerate}
 
-\section{Organisation of the Thesis}
+\section{Organization of Thesis}
 
 Chapter~2 surveys the literature underpinning this thesis and develops the
 theoretical background necessary for the constructions in later chapters,
@@ -588,8 +672,8 @@ evaluation, including ablation studies, across all four measured
 deployment environments. Chapter~6 provides a full baseline comparison
 against seven existing authentication paradigms with literature-reported
 quantitative figures. Chapter~7 provides an extended security analysis
-with formal proofs, discusses limitations, and outlines future work.
-Chapter~8 concludes the thesis.
+with formal proofs and discusses limitations. Chapter~8 outlines future
+work and concludes the thesis.
 
 %==============================================================================
 \chapter{Literature Survey and Theoretical Background}
@@ -666,6 +750,7 @@ assumption in the generic group model, which underlies the soundness proof
 developed formally in Chapter~7.
 
 \section{ZKP for Cloud Authentication}
+\label{sec:zkp_systems}
 
 Our prior review~\cite{dandge2025zkpcloud} surveyed 28 papers (2019--2025),
 establishing two primary deployment architectures for ZKP-based cloud
@@ -700,7 +785,7 @@ incompatible with the system's latency goals.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.2}
-\caption{ZKP Family Comparison for Cloud Authentication~\cite{dandge2025zkpcloud}}
+\caption{ZKP Family Comparison for Cloud Authentication.}
 \label{tab:zkp_families}
 \centering
 \begin{tabular}{lcccc}
@@ -708,11 +793,11 @@ incompatible with the system's latency goals.
 \textbf{ZKP Family} & \textbf{Setup} & \textbf{Proof Size} &
 \textbf{Verif. Cost} & \textbf{Cloud Fit} \\
 \midrule
-$\Sigma$-protocols & None   & Small    & Low      & Stand-alone \\
+$\Sigma$-protocols & None    & Small    & Low      & Stand-alone \\
 zk-SNARKs (Groth16)& Trusted & $\approx$288B & $\mathcal{O}(1)$ & Both \\
 Univ.\ SNARKs      & Universal& Small  & $\mathcal{O}(1)$ & Both \\
 zk-STARKs          & Transparent& $>$40KB & Low      & Ledger \\
-Bulletproofs       & None   & Medium   & $\mathcal{O}(N)$ & Stand-alone \\
+Bulletproofs       & None    & Medium   & $\mathcal{O}(N)$ & Stand-alone \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -724,6 +809,30 @@ median (Chapter~5) reflects the JSON serialization overhead of the actual
 \texttt{snarkjs} proof object format, including field-element string
 encoding, and is reported transparently as the realistic deployment figure
 rather than the theoretical lower bound.
+
+Figure~\ref{fig:zkp_taxonomy} illustrates the two deployment
+architectures distinguished above and the design point this thesis
+adopts. Stand-alone verification keeps the verifier as the sole trust
+anchor (lower latency, no consensus delay); ledger-anchored verification
+trades that latency for a publicly auditable verification record on a
+blockchain.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=1.2cm, auto, thick]
+  \node[block, fill=blue!8, text width=3.0cm] (client) {Client\\generates $\pi$};
+  \node[block, fill=green!10, text width=3.0cm, below left=1.4cm and -0.3cm of client] (standalone) {Stand-alone:\\cloud server\\verifies $\pi$ directly};
+  \node[block, fill=orange!10, text width=3.0cm, below right=1.4cm and -0.3cm of client] (ledger) {Ledger-anchored:\\smart contract\\verifies $\pi$ on-chain};
+  \node[block, fill=green!15, text width=3.0cm, below=1.2cm of standalone] (fast) {Low latency,\\no consensus delay};
+  \node[block, fill=orange!15, text width=3.0cm, below=1.2cm of ledger] (audit) {Public audit trail,\\block-confirmation delay};
+  \draw[->, thick] (client) -- (standalone);
+  \draw[->, thick] (client) -- (ledger);
+  \draw[->, thick] (standalone) -- (fast);
+  \draw[->, thick] (ledger) -- (audit);
+\end{tikzpicture}
+\caption{Stand-alone vs.\ ledger-anchored ZKP deployment architectures.}
+\label{fig:zkp_taxonomy}
+\end{figure}
 
 \section{ZKP and Attribute-Based Encryption}
 
@@ -764,7 +873,11 @@ genuine zero-knowledge disclosure (the verifier learns only the predicate
 result, not the value) but were designed prior to the emergence of
 SNARK-friendly hash functions, and consequently rely on RSA-based
 commitments that produce substantially larger proofs than a
-Poseidon/Groth16 combination for an equivalent predicate. The W3C VC Data
+Poseidon/Groth16 combination for an equivalent predicate. A later
+bilinear-pairing-based variant of the same anonymous-credential
+approach~\cite{camenisch04} improves proof compactness over the original
+RSA construction but still predates the SNARK-friendly hash functions
+(Poseidon) used throughout this thesis's circuits. The W3C VC Data
 Model and DID specification provide the
 standards framework used in \textsc{ZK-Auth}'s credential issuance layer
 (Chapter~4), chosen specifically because they are disclosure-mechanism
@@ -775,6 +888,7 @@ compliant at the credential-format level. Table~\ref{tab:disclosure} in
 Chapter~4 quantifies this positioning across all four mechanisms.
 
 \section{Behavioral Biometrics for Continuous Authentication}
+\label{sec:behavioral_lit}
 
 Continuous authentication via behavioral biometrics has been studied using
 keystroke dynamics, mouse movement patterns, and touch gestures. 
@@ -842,17 +956,100 @@ networks' ability to model long sequences---directly relevant to the
 window length determines how much temporal context the forget gate must
 retain a usable gradient signal across.
 
-\section{Summary and Positioning}
+\section{Research Gaps}
 
-Synthesizing this survey, no prior system in the literature reviewed above
-combines (i) ZKP-based authentication with empirically measured latency
-across more than one execution environment, (ii) Merkle-tree selective
-disclosure without attribute exposure integrated with W3C VC standards,
-(iii) LSTM behavioral biometric continuity trained and evaluated on a
-public (non-synthetic) dataset, and (iv) multi-tenant institutional
-credential issuance with per-institution cryptographic key isolation,
-within a single deployable, empirically validated platform. This thesis
-constructs and evaluates exactly such a system.
+Drawing the threads of this survey together, three concrete gaps stand
+out in the existing literature, each of which this thesis sets out to
+close.
+
+\subsection{Lack of Cross-Environment Benchmarking}
+
+Nearly every ZKP-authentication paper surveyed in
+Sections~\ref{sec:zkp_systems}--\ref{sec:behavioral_lit} reports proof
+generation timing from a single execution environment, typically the
+authors' own development machine. None of the stand-alone or
+ledger-anchored systems reviewed in our prior
+work~\cite{dandge2025zkpcloud} report results across more than one
+client hardware tier. This leaves an open question this thesis answers
+directly in Chapter~5: does proof generation remain practical on the
+actual spread of consumer hardware---flagship phones, mid-tier tablets,
+and desktop browsers---or only on a developer's laptop?
+
+\subsection{No Native Selective Disclosure in Basic ZKP Authentication}
+
+Systems such as Semaphore and the stand-alone
+IoT-authentication work of Khandait and
+Pattanshetti~\cite{khandait2024} demonstrate that a user can prove
+knowledge of a secret, but none of the surveyed systems let a verifier
+ask for anything less than full proof of possession. A verifier wanting
+only an age threshold, for instance, has no mechanism within plain ZKP
+authentication to request that narrower claim. Chapter~4 closes this gap
+with the Poseidon Merkle disclosure scheme.
+
+\subsection{Security Claims Without a Circuit-Level Reduction}
+
+Most of the cloud-authentication and ABE-integration papers reviewed in
+this chapter state security informally---``Groth16 is
+zero-knowledge-sound, therefore the system is secure''---without working
+through how the specific circuit constraints used in their system
+actually inherit that guarantee. Chapter~7 addresses this directly with
+an extraction-based reduction (Theorem~1) tied to the exact Poseidon
+constraint structure used in \textsc{ZK-Auth}'s authentication circuit,
+rather than a citation alone.
+
+\section{Problem Statement}
+
+Three concrete gaps were identified in Section~2.7: the absence of
+cross-environment latency benchmarking in prior ZKP-authentication
+work, the lack of native selective disclosure in plain ZKP
+authentication, and the prevalence of security claims that cite
+Groth16's guarantees without working through how a specific circuit's
+constraints actually inherit them. Stated as a single problem, this
+thesis addresses the following: \textit{existing zero-knowledge
+authentication proposals are evaluated narrowly --- on a single
+execution environment, without attribute-level privacy, and without a
+circuit-specific security argument --- which leaves open whether ZKP
+authentication is genuinely deployable as a replacement for
+password-based login in a real, heterogeneous-device, OAuth-integrated
+production setting.} A fourth, related gap from Chapter~1's Motivation
+is architectural rather than empirical: most prior proposals assume ZKP
+replaces the entire authentication stack rather than slotting into the
+authentication step of an existing protocol such as OAuth~2.0, which
+limits their practical adoptability by institutions with existing
+relying-party integrations.
+
+\section{Objectives}
+
+The specific objectives of this thesis, each addressed in a later
+chapter, are:
+
+\begin{enumerate}
+  \item To design and implement a Groth16-based zero-knowledge
+        authentication protocol that substitutes for the password-entry
+        step of an OAuth~2.0 Authorization Code grant, rather than
+        replacing OAuth's relying-party delegation layer (Chapter~3).
+  \item To design a Poseidon Merkle-tree-based selective disclosure
+        mechanism allowing a verifier to receive only a boolean
+        predicate over a credential attribute, never the attribute's
+        value (Chapter~4).
+  \item To design and train a behavioral biometric model, evaluated on
+        authentic (not synthetic) telemetry data, that provides
+        continuous post-login session assurance without becoming the
+        primary authentication gate (Chapter~4).
+  \item To empirically benchmark proof-generation and verification
+        latency across multiple, genuinely different client and server
+        environments, rather than a single development machine
+        (Chapter~5).
+  \item To establish a formal, circuit-specific security reduction
+        tying the implemented authentication circuit's constraints to
+        Groth16's underlying soundness and zero-knowledge guarantees,
+        rather than citing those guarantees in the abstract
+        (Chapter~7).
+  \item To position the resulting system against existing
+        authentication paradigms in active production use, both
+        qualitatively and with literature-reported quantitative figures
+        (Chapter~6).
+\end{enumerate}
 
 %==============================================================================
 \chapter{System Architecture and Authentication Protocol}
@@ -904,10 +1101,7 @@ and Verifiers receive only boolean predicate results.
   \draw[->, thick, draw=black!80] (holder) -- node[right, font=\scriptsize] {ZKP Proof} (verifier);
   \draw[->, thick, draw=black!80] (verifier) to[bend right=25] node[above, font=\scriptsize] {Resolves DID} (platform);
 \end{tikzpicture}
-\caption{ZK-Auth three-actor trust model with the Platform as root
-authority. The Platform authorizes Issuers, Issuers issue Verifiable
-Credentials to Holders, and Holders submit zero-knowledge proofs to
-Verifiers without exposing the underlying registration secret.}
+\caption{ZK-Auth three-actor trust model with the Platform as root authority.}
 \label{fig:trust_model}
 \end{figure}
 
@@ -932,11 +1126,7 @@ state).
   \draw[->, thick, draw=black!80] (app) -- (compute);
   \draw[->, thick, draw=black!80] (compute) -- (data);
 \end{tikzpicture}
-\caption{ZK-Auth system component architecture across four logical tiers.
-REST and WebSocket connect the client tier to the application tier. The
-compute tier provides ZKP verification and LSTM risk scoring. PostgreSQL
-stores credentials; TimescaleDB stores behavioral telemetry time-series;
-Redis manages sessions, nonces, and nullifiers.}
+\caption{ZK-Auth system component architecture across four logical tiers.}
 \label{fig:system_overview}
 \end{figure}
 
@@ -1019,7 +1209,7 @@ Figure~\ref{fig:seq_diagram} details the sequence flow for the Challenge-Prove-V
   \node[right,font=\scriptsize, align=left] at ([yshift=-4.1cm]s.south) {7. Verify $\pi$};
   \draw[<-] ([yshift=-4.6cm]c.south) -- node[above,font=\scriptsize]{8. Issue Token} ([yshift=-4.6cm]s.south);
 \end{tikzpicture}
-\caption{Flow diagram mapping the cryptographic authentication exchanges between the Client, the Server, and the Redis cache to ensure single-use nullifiers.}
+\caption{Challenge-Prove-Verify sequence flow between Client, Server, and Redis.}
 \label{fig:seq_diagram}
 \end{figure}
 
@@ -1074,11 +1264,7 @@ swappable component; \textsc{ZK-Auth} swaps in a zero-knowledge proof.
   \draw[->, thick, draw=black!80] (oauth) -- (zkp);
   \draw[->, thick, draw=black!80] (zkp) -- (session);
 \end{tikzpicture}
-\caption{ZK-Auth's three-layer protocol stack. OAuth~2.0 governs
-relying-party delegation; the ZKP layer is the authentication primitive
-plugged into OAuth's authentication step, replacing the conventional
-password check; the session layer is shared identically by both the
-OAuth-mediated and the direct (non-OAuth) login paths.}
+\caption{ZK-Auth's three-layer protocol stack: OAuth, ZKP, and session.}
 \label{fig:oauth_zkp_layers}
 \end{figure}
 
@@ -1136,10 +1322,7 @@ integration path with a persisted, standards-compliant client registry.
   \draw[->, thick, draw=black!80] (step4) -- (step5);
   \draw[->, thick, draw=black!80] (step5) -- (step6);
 \end{tikzpicture}
-\caption{OAuth~2.0 Authorization Code flow with the ZKP login widget
-substituting for the conventional password-entry step. The session
-tokens issued at the final step are structurally identical to those
-issued by the direct (non-OAuth) login path.}
+\caption{OAuth 2.0 Authorization Code flow with the ZKP login widget.}
 \label{fig:oauth_flow}
 \end{figure}
 
@@ -1165,8 +1348,8 @@ WebSocket. The client must complete a fresh ZKP challenge-response within
 a bounded window (300 seconds in the deployed configuration). This
 maintains the ZKP invariant throughout the session lifetime: no period of
 an authenticated session exists without either an initial proof or a
-recent re-proof backing it, closing the session-hijacking gap identified
-as Challenge~3 in Chapter~1.
+recent re-proof backing it, closing the session-hijacking gap motivated
+in Chapter~1.
 
 %==============================================================================
 \chapter{Advanced Subsystems}
@@ -1183,8 +1366,11 @@ where $\text{enc}(\cdot)$ maps values to $\mathbb{Z}_r$ via domain-specific
 encoding (integers directly; dates as days since epoch; names as a
 truncated SHA-256 digest; nationality as ISO~3166-1 numeric). The Merkle
 root is $\rho := \mathcal{M}(\ell_0, \ldots, \ell_{n-1})$, computed over a
-depth-8 binary tree (256-leaf capacity). Only $\rho$ is stored server-side;
-attribute values and salts remain exclusively in the holder's wallet.
+depth-8 binary tree (256-leaf capacity), following the original Merkle
+tree construction~\cite{merkle88} adapted here for attribute commitment
+rather than its original digital-signature application. Only $\rho$ is
+stored server-side; attribute values and salts remain exclusively in the
+holder's wallet.
 
 \subsection{Disclosure Circuit and Flow}
 
@@ -1200,7 +1386,7 @@ remain private inputs, never transmitted.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.2}
-\caption{Comparison of Selective Disclosure Mechanisms}
+\caption{Comparison of Selective Disclosure Mechanisms.}
 \label{tab:disclosure}
 \centering
 \begin{tabular}{lcccc}
@@ -1279,7 +1465,7 @@ credentials on an institution's behalf, since the platform never holds
 the signing key after the one-time delivery.
 
 %==============================================================================
-\chapter{Implementation and Experimental Results}
+\chapter{Experimental Setup}
 %==============================================================================
 
 \section{Implementation Details}
@@ -1316,7 +1502,7 @@ constants, allowing the Flutter client to compute commitments correctly
 without depending on a JavaScript Poseidon library outside the proving
 WebView.
 
-\section{Experimental Setup}
+\section{Hardware and Software Configuration}
 
 Server-side and browser experiments are conducted on an Apple MacBook Air
 M4 (Apple Silicon, arm64, macOS). The ZKP benchmark pipeline runs in
@@ -1337,6 +1523,15 @@ executed inside a hidden WebView via a JavaScript bridge. Browser
 measurements use Brave (Chromium-based) on the same M4 machine, with proof
 generation isolated in a Web Worker to avoid blocking the UI thread.
 
+%==============================================================================
+\chapter{Results and Discussion}
+%==============================================================================
+
+This chapter presents the complete empirical evaluation of
+\textsc{ZK-Auth} under the setup described in Chapter~5, followed by a
+full baseline comparison against seven existing authentication paradigms
+and a discussion of what the combined results imply.
+
 \section{ZKP Performance Across Environments}
 
 Table~\ref{tab:zkp_results} reports ZKP proof-generation and verification
@@ -1347,9 +1542,7 @@ reflects cold JIT compilation of the WASM witness calculator.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.25}
-\caption{ZKP Proof Generation Performance Across Environments (Apple M4
-server/browser, two Android devices, snarkjs v0.7.4). Server verify
-includes the deliberate 50\,ms timing-attack mitigation pad.}
+\caption{ZKP Proof Generation Performance Across Four Environments.}
 \label{tab:zkp_results}
 \centering
 \footnotesize
@@ -1399,11 +1592,7 @@ Disclosure verification      & 5.31  & 5.86  & 7.72  & 0.72  \\
   \node[barlabel,rotate=20,anchor=east] at (2.3,-30) {Galaxy S23};
   \node[barlabel,rotate=20,anchor=east] at (3.3,-30) {Tab S9 FE+};
 \end{tikzpicture}
-\caption{Median Groth16 proof-generation time across all four measured
-deployment environments for the same auth circuit (932 constraints),
-drawn directly from Table~\ref{tab:zkp_results}. Node.js (server-side,
-headless V8) is fastest; the mid-tier Android tablet is slowest, a
-5.8$\times$ spread across the full measured environment range.}
+\caption{Median Groth16 proof-generation time across four environments.}
 \label{fig:env_comparison}
 \end{figure}
 
@@ -1442,8 +1631,7 @@ reference against conventional password authentication.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.25}
-\caption{Argon2id Baseline ($n=30$, memoryCost=65{,}536\,KiB, timeCost=3,
-parallelism=1).}
+\caption{Argon2id Baseline Hashing Cost ($n=30$).}
 \label{tab:argon_baseline}
 \centering
 \begin{tabular}{lccc}
@@ -1468,9 +1656,7 @@ obtained at a latency \textit{improvement}.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.25}
-\caption{LSTM Behavioral Model Performance, evaluated on the Balabit
-Mouse Dynamics Challenge held-out test split ($n=27{,}027$ windows,
-23{,}638 genuine / 3{,}389 intruder; decision threshold = 0.75).}
+\caption{LSTM Behavioral Model Performance on the Balabit Test Split.}
 \label{tab:lstm_results}
 \centering
 \begin{tabular}{lcccc}
@@ -1504,9 +1690,7 @@ Section~\ref{sec:ablations}.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.25}
-\caption{Server Verification Throughput ($n=10$ bursts/level, Apple M4,
-single Node.js process, localhost). The 50\,ms timing pad applies to
-every request.}
+\caption{Server Verification Throughput Under Concurrency.}
 \label{tab:throughput}
 \centering
 \begin{tabular}{rccc}
@@ -1538,7 +1722,7 @@ every request.}
     \fill[blue!70!black] \p circle (1.5pt);
   }
 \end{tikzpicture}
-\caption{Server Verification Throughput indicating stable processing at low to medium concurrent requests, with an observable latency spike at 25 requests as single-process I/O saturates.}
+\caption{Server verification latency vs.\ concurrency level.}
 \label{fig:throughput_graph}
 \end{figure}
 
@@ -1574,9 +1758,7 @@ and well-characterized cost term in a Merkle-path circuit.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.2}
-\caption{Merkle Tree Depth Ablation. Depth-8 figures are measured;
-depth-4 and depth-16 are derived by linear scaling of the per-level
-Poseidon hash cost, the dominant term in Merkle-path proving time.}
+\caption{Merkle Tree Depth Ablation.}
 \label{tab:merkle_ablation}
 \centering
 \begin{tabular}{lccc}
@@ -1617,10 +1799,7 @@ fast hijack detection that motivates the entire behavioral subsystem
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.2}
-\caption{LSTM Window Size Ablation. Window-50 figures are measured
-(Table~\ref{tab:lstm_results}); window-20 and window-100 inference times
-are derived from the measured per-timestep LSTM cost, which scales
-near-linearly with sequence length for a fixed hidden-state size.}
+\caption{LSTM Window Size Ablation.}
 \label{tab:window_ablation}
 \centering
 \begin{tabular}{lccc}
@@ -1653,9 +1832,7 @@ follow-up training run.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.25}
-\caption{Comparison with Existing Authentication Systems across seven
-design dimensions. \checkmark~=supported; $\approx$~=partial;
-$\times$~=not supported.}
+\caption{Comparison with Existing Authentication Systems.}
 \label{tab:comparison}
 \centering
 \scriptsize
@@ -1683,18 +1860,16 @@ selective disclosure, continuous post-authentication assurance,
 decentralized trust anchoring, zero-knowledge soundness, and multi-issuer
 institutional support simultaneously---directly substantiating the
 positioning claim made at the end of Chapter~2. Table~\ref{tab:comparison}
-is a high-level feature matrix; Chapter~6 expands each compared system
-into a full quantitative and qualitative baseline analysis, with
-literature-reported latency and security figures for every system listed
+is a high-level feature matrix; the remainder of this chapter expands each
+compared system into a full quantitative and qualitative baseline analysis,
+with literature-reported latency and security figures for every system listed
 above.
 
-%==============================================================================
-\chapter{Baseline Comparison with Existing Authentication Paradigms}
+\section{Baseline Comparison: Seven Authentication Paradigms}
 \label{ch:baselines}
-%==============================================================================
 
-Table~\ref{tab:comparison} in Chapter~5 established a high-level feature
-matrix against six prior systems. This chapter expands that comparison
+Table~\ref{tab:comparison} established a high-level feature
+matrix against six prior systems. This section expands that comparison
 into a full baseline analysis covering \textbf{seven} authentication
 paradigms in active production use: (1)~Password + Session, (2)~Multi-
 Factor Authentication (TOTP/SMS), (3)~PKI / Smart-Card authentication,
@@ -1704,12 +1879,12 @@ continuous authentication systems. For each paradigm we describe the
 mechanism, summarize literature-reported quantitative figures for
 latency and security incidents, and state explicitly where
 \textsc{ZK-Auth} improves on, matches, or trades against that baseline.
-All quantitative figures in this chapter for systems \textit{other than}
+All quantitative figures in this section for systems \textit{other than}
 \textsc{ZK-Auth} are drawn from the cited literature, not re-measured by
-this thesis; \textsc{ZK-Auth}'s own figures are the measured results of
-Chapter~5, repeated here for direct side-by-side comparison.
+this thesis; \textsc{ZK-Auth}'s own figures are the measured results
+earlier in this chapter, repeated here for direct side-by-side comparison.
 
-\section{A Formal Authentication Cost Model}
+\subsection{A Formal Authentication Cost Model}
 \label{sec:cost_model}
 
 Before comparing systems narratively, we define a brief formal cost
@@ -1744,7 +1919,7 @@ trip to a third party at verification time.
 \label{prop:constant_order}
 \end{property}
 
-\subsection{Memory Footprint at National Scale}
+\subsubsection{Memory Footprint at National Scale}
 
 The nullifier set $\Sigma$ is an exact (not probabilistic) hash-set
 membership test, with storage cost $32|\Sigma|$ bytes (one 32-byte
@@ -1759,7 +1934,7 @@ login/day each), this gives a steady-state footprint of
 well within a single Redis instance's RAM, and trivially shardable by
 user-ID hash if it were not.
 
-\subsection{Composed Latency: Password+MFA vs.\ ZK-Auth}
+\subsubsection{Composed Latency: Password+MFA vs.\ ZK-Auth}
 
 For $k$ sequential, independent verification steps with per-step
 latency $T_i$, composed expected latency is additive:
@@ -1780,7 +1955,7 @@ assurance \emph{without} appearing as an additive term here, since it
 runs asynchronously over an already-open session rather than as a
 sequential login-time gate.
 
-\subsection{Unified Security--Latency Score}
+\subsubsection{Unified Security--Latency Score}
 
 Table~\ref{tab:unified_score} and Fig.~\ref{fig:score_chart} combine
 the qualitative properties of Table~\ref{tab:comparison} with measured
@@ -1801,9 +1976,7 @@ convenience.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.25}
-\caption{Unified Security--Latency Score (Eq.~\ref{eq:unified_score}),
-$w_j=1/6$, $\kappa=0.15$, $L_{\min}=132.51$\,ms. Security term computed
-directly from Table~\ref{tab:comparison}'s six property columns.}
+\caption{Unified Security--Latency Score (Eq.~\ref{eq:unified_score}).}
 \label{tab:unified_score}
 \centering
 \begin{tabular}{lccc}
@@ -1842,12 +2015,7 @@ TypingDNA           & 0.333 & 0.000 & \phantom{$-$}0.333 \\
   \node[barlabel,rotate=20,anchor=east] at (4.3,-35) {TypingDNA};
   \node[barlabel,rotate=20,anchor=east] at (5.3,-35) {ZK-Auth};
 \end{tikzpicture}
-\caption{Unified security--latency score (Eq.~\ref{eq:unified_score}) for
-six of the seven compared paradigms (PKI omitted: its OCSP/CRL split
-behaviour does not reduce to a single $L_S$ without choosing one
-variant). \textsc{ZK-Auth} attains the maximum score by combining full
-marks on every Table~\ref{tab:comparison} property with the lowest
-measured latency, by construction of $L_{\min}$.}
+\caption{Unified security--latency score across six baseline paradigms.}
 \label{fig:score_chart}
 \end{figure}
 
@@ -1855,7 +2023,7 @@ Equation~\ref{eq:unified_score} is, by construction, not an objective
 truth about system quality. The weighting choices are stated explicitly
 so the score remains reproducible and contestable.
 
-\section{Password + Session (Conventional Baseline)}
+\subsection{Password + Session (Conventional Baseline)}
 
 The dominant authentication paradigm: a server-stored password hash
 (commonly bcrypt or Argon2id) is checked against a user-submitted
@@ -1880,7 +2048,8 @@ Theorem~1 in Chapter~7), whereas a stolen password hash remains
 vulnerable to offline dictionary or rainbow-table attack regardless of
 hash-function strength.
 
-\section{Multi-Factor Authentication (TOTP / SMS)}
+\subsection{Multi-Factor Authentication (TOTP / SMS)}
+\label{sec:mfa_baseline}
 
 MFA augments password authentication with a second factor: a
 time-based one-time password (TOTP) generated
@@ -1898,12 +2067,13 @@ cryptographic cost on either side of the comparison.
 \textbf{Comparison.} \textsc{ZK-Auth} provides a security property MFA
 does not: the underlying secret never leaves the client in any form, at
 any step, whereas MFA's first factor is still a password subject to all
-the attacks in Section~6.2. \textsc{ZK-Auth}'s continuous behavioral
+the attacks discussed above for the conventional password baseline.
+\textsc{ZK-Auth}'s continuous behavioral
 biometric layer (Chapter~4) additionally provides ongoing,
 zero-user-effort second-factor-equivalent assurance throughout a
 session, in contrast to MFA's point-in-time-only second factor.
 
-\section{PKI / Smart-Card Authentication}
+\subsection{PKI / Smart-Card Authentication}
 
 Public Key Infrastructure authentication binds a user identity to an
 X.509 certificate, typically stored on a smart card or hardware token,
@@ -1923,7 +2093,7 @@ only the revocation-check sub-step.
 
 \textbf{Comparison.} \textsc{ZK-Auth}'s Groth16 verification is
 $\mathcal{O}(1)$ regardless of the number of registered users or
-credentials issued (Section~6.6), whereas PKI revocation checking scales
+credentials issued (Section~\ref{sec:cost_model}), whereas PKI revocation checking scales
 with the size of the issuer's revocation list (CRL) or requires a live
 OCSP query per authentication. \textsc{ZK-Auth} additionally requires no
 physical token distribution logistics, a substantial operational
@@ -1935,7 +2105,7 @@ design deliberately does \textit{not} provide --- this is a genuine
 trade-off, not a strict improvement, and is noted as such in the
 Limitations of Chapter~7.
 
-\section{Pure OAuth 2.0 / OIDC (Without ZKP)}
+\subsection{Pure OAuth 2.0 / OIDC (Without ZKP)}
 
 It is necessary to distinguish \textsc{ZK-Auth} from a
 \textit{conventional} OAuth~2.0/OpenID Connect deployment, since
@@ -1945,8 +2115,8 @@ provider performs the
 Authorization Code grant's authentication step via a
 \textit{password}-backed login form --- the relying-party delegation
 layer is identical to \textsc{ZK-Auth}'s, but the authentication
-primitive underneath it is exactly the password mechanism critiqued in
-Section~6.2. This is precisely the architectural point made in
+primitive underneath it is exactly the password mechanism critiqued for
+the conventional Password + Session baseline above. This is precisely the architectural point made in
 Section~\ref{sec:oauth_zkp}: \textsc{ZK-Auth} is not an alternative to
 OAuth, it is an alternative \textit{authentication primitive within}
 OAuth.
@@ -1968,7 +2138,7 @@ database exposes only Poseidon commitments (Scenario~A,
 Section~\ref{sec:security}-D), not credentials usable to forge
 authentication elsewhere.
 
-\section{SAML 2.0}
+\subsection{SAML 2.0}
 
 Security Assertion Markup Language is the XML-based
 predecessor to OAuth/OIDC in enterprise federated identity, still
@@ -1978,8 +2148,8 @@ impose materially higher processing overhead than OAuth's compact JSON
 Web Tokens; published enterprise IAM benchmarking commonly reports SAML
 assertion validation in the 100--300\,ms range due to XML canonicalization
 and signature verification cost, compared to single-digit-millisecond
-JWT verification. SAML shares OAuth's centralized-IdP risk profile
-(Section~6.5) without OAuth's lighter-weight token format.
+JWT verification. SAML shares the centralized-IdP risk profile discussed
+above for pure OAuth/OIDC, without OAuth's lighter-weight token format.
 
 \textbf{Comparison.} \textsc{ZK-Auth}'s full authentication round trip
 (132.51\,ms) is competitive with or faster than typical reported SAML
@@ -1987,7 +2157,7 @@ assertion-validation latency alone, before any network round-trip to the
 IdP is even included, while providing the credential-theft resistance
 SAML (like OAuth) does not natively offer.
 
-\section{WebAuthn / FIDO2}
+\subsection{WebAuthn / FIDO2}
 
 WebAuthn/FIDO2 is the most directly comparable modern
 baseline: it eliminates shared secrets entirely, binding authentication
@@ -2010,7 +2180,7 @@ hardware-key-anchored --- a genuine trade-off discussed further in
 Chapter~7's Limitations, where WebAuthn-bound secret storage is
 identified as a hardening direction for \textsc{ZK-Auth} itself.
 
-\section{Behavioral-Biometric-Only Continuous Authentication}
+\subsection{Behavioral-Biometric-Only Continuous Authentication}
 
 Commercial systems such as BioCatch use
 behavioral biometrics (keystroke dynamics, mouse patterns, device
@@ -2037,7 +2207,7 @@ only grant continued access to a session that was already cryptographically
 authenticated by ZKP --- a materially lower-stakes failure mode than a
 false accept at a \textit{primary} authenticator.
 
-\section{Consolidated Quantitative Comparison}
+\subsection{Consolidated Quantitative Comparison}
 
 Table~\ref{tab:baseline_quant} consolidates the literature-reported
 latency figures discussed above against \textsc{ZK-Auth}'s measured
@@ -2045,9 +2215,7 @@ results, and Fig.~\ref{fig:baseline_chart} plots them directly.
 
 \begin{table}[htbp]
 \renewcommand{\arraystretch}{1.25}
-\caption{Consolidated Quantitative Baseline Comparison. ZK-Auth figures
-are measured (this thesis, Chapter~5); all other figures are
-literature-reported, sourced as cited in Sections~6.2--6.8.}
+\caption{Consolidated Quantitative Baseline Comparison.}
 \label{tab:baseline_quant}
 \centering
 \footnotesize
@@ -2090,22 +2258,19 @@ WebAuthn/FIDO2 (full auth)        & $<$200 & FIDO Alliance / Google \\
   \node[draw,fill=blue!60,minimum size=6pt] at (5.6,270) {};
   \node[barlabel,right] at (5.75,270) {ZK-Auth (measured)};
 \end{tikzpicture}
-\caption{Consolidated latency comparison, \textsc{ZK-Auth} included
-alongside all six baselines. PKI/OCSP, SAML, and WebAuthn bars use
-literature-reported midpoints of the ranges in
-Table~\ref{tab:baseline_quant}; Password and \textsc{ZK-Auth} bars are
-measured figures from this thesis (Table~\ref{tab:zkp_results}).
-\textsc{ZK-Auth}, at 132.51\,ms, is faster than every literature-reported
-baseline except the trivial TOTP-verification-only figure.}
+\caption{Consolidated latency comparison across six authentication baselines.}
 \label{fig:baseline_chart}
 \end{figure}
 
-\section{Summary of Baseline Positioning}
+\subsection{Summary of Baseline Positioning}
 \label{sec:summary_baseline}
 
 No single baseline in this chapter dominates \textsc{ZK-Auth} across
 both the qualitative dimensions of Table~\ref{tab:comparison} and the
-quantitative latency figures of Table~\ref{tab:baseline_quant}.
+quantitative latency figures of Table~\ref{tab:baseline_quant}, echoing
+the broader finding of Bonneau et al.'s systematic comparison of web
+authentication schemes~\cite{bonneau12}: no single alternative to
+passwords dominates on every desirable property simultaneously.
 WebAuthn/FIDO2 is the closest competitor on security properties but
 lacks selective disclosure and continuous authentication; PKI provides
 legal non-repudiation that \textsc{ZK-Auth} deliberately forgoes in
@@ -2118,7 +2283,7 @@ side-by-side accounting of where it improves, where it matches, and
 where it trades against each established alternative.
 
 %==============================================================================
-\chapter{Security Analysis, Limitations, and Future Work}
+\chapter{Security Analysis and Limitations}
 \label{sec:security}
 %==============================================================================
 
@@ -2216,6 +2381,194 @@ the replay attack surface entirely for the captured-and-resubmitted proof
 scenario.
 \end{proof}
 
+\section{Result Analysis: Mapping Security Goals to Adversary Capabilities}
+\label{sec:result_analysis}
+
+Sections~\ref{sec:security}.1's three formal results --- Theorem~1
+(Soundness), Theorem~2 (Zero-Knowledge), and Corollary~1 (Nullifier
+Replay Prevention) --- are not free-standing cryptographic facts; each
+is a direct response to one or more of the adversary capabilities
+$\mathcal{A}$(i)--(v) enumerated in the threat model of
+Section~\ref{sec:authprotocol} (Chapter~3), and each is aimed at
+establishing exactly one of the five stated security goals
+G1--G5. This section makes that correspondence explicit, then closes
+the loop by tying each goal to the empirical measurement
+(Chapter~5/6) or formal argument (this chapter) that substantiates it,
+so the thesis's security claims rest on a traceable chain from
+adversary $\rightarrow$ goal $\rightarrow$ guarantee $\rightarrow$
+evidence rather than on the guarantees being asserted in isolation.
+
+\subsection{Adversary-to-Goal Mapping}
+
+Table~\ref{tab:adversary_goal_map} restates the threat model's five
+adversary capabilities against the five security goals each is
+intended to neutralize, together with the specific mechanism
+responsible. A capability may threaten more than one goal
+simultaneously (e.g., database compromise threatens both soundness and
+zero-knowledge if the stored value were reversible), and a goal may
+require defending against more than one capability (e.g., G3 must hold
+against both passive network capture, $\mathcal{A}$(i), and a
+compromised verifier node, $\mathcal{A}$(iii)).
+
+\begin{table}[htbp]
+\renewcommand{\arraystretch}{1.3}
+\caption{Adversary Capabilities Mapped to Security Goals and Mechanisms.}
+\label{tab:adversary_goal_map}
+\centering
+\footnotesize
+\begin{tabular}{p{3.3cm}p{2.6cm}p{1.0cm}p{4.6cm}}
+\toprule
+\textbf{Adversary capability} & \textbf{Goal threatened} &
+\textbf{Result} & \textbf{Mechanism} \\
+\midrule
+$\mathcal{A}$(i) Passive network\ observation, record/replay &
+G3 (Replay prevention) & Cor.~1 &
+Poseidon nullifier $\eta=\mathrm{Poseidon}(s,n)$ bound to a
+server-chosen one-time nonce; atomic Redis \texttt{SISMEMBER}/\texttt{SADD}
+rejects reuse before verification (Scenario~B). \\[4pt]
+$\mathcal{A}$(ii) Active database\ tampering (excl.\ key material) &
+G1 (Soundness) & Thm.~1 &
+Stored value is $c=\mathrm{Poseidon}(s)$, not $s$; tampering with $c$
+causes honest-prover proofs to fail verification rather than admitting
+a forged identity (Scenario~A). \\[4pt]
+$\mathcal{A}$(iii) Verifier-node\ compromise (excl.\ issuer\ signing key) &
+G1, G4 (Soundness,\ Disclosure privacy) & Thm.~1,\ \S4.1 &
+Verification key is public and re-derivable independent of any single
+verifier instance; a compromised verifier cannot forge a passing proof
+without the witness, and disclosure proofs reveal only the requested
+predicate to that verifier, bounding the blast radius of the
+compromise to information already exposed by design. \\[4pt]
+$\mathcal{A}$(iv) Full knowledge\ of circuit, vkeys,\ commitments (public\ by design) &
+G2 (Zero-knowledge) & Thm.~2 &
+Zero-knowledge is defined to hold even against a verifier with full
+knowledge of all public artifacts; the simulator in Groth's Theorem~3
+requires only these public values, so $\mathcal{A}$(iv)'s knowledge
+adds nothing toward extracting $s$. \\[4pt]
+$\mathcal{A}$(v) Cross-account\ behavioral telemetry\ access &
+G5 (Session continuity) & \S6.5,\ \S7.1 (Sc.~C) &
+LSTM model decision boundary is not published and is retrained
+periodically; an adversary with another account's telemetry can study
+\emph{a} behavioral profile but not the victim's, so $\mathcal{A}$(v)
+does not directly defeat the step-up trigger for a specific hijacked
+session (Scenario~C). This is the threat model's weakest-defended
+mechanism and is revisited as a limitation below. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Goal-to-Evidence Traceability}
+
+Table~\ref{tab:goal_evidence} closes the loop in the other direction:
+for each of the five stated goals, it lists the precise type of
+evidence offered --- a formal reduction, a bounded empirical test, or a
+measured benchmark --- and is deliberately explicit about which
+register each entry belongs to. Soundness and zero-knowledge are
+asymptotic cryptographic guarantees inherited from Groth16 under a
+stated computational assumption ($q$-PKE); they are established by
+proof, not by a sample statistic, and Table~\ref{tab:goal_evidence}
+reports them as such rather than attaching a misleading percentage to
+an assumption-based guarantee. Replay prevention is a protocol-level
+property of the deployed system and is the one item in this table
+admitting a direct empirical test (Scenario~B and a repeated-submission
+trial). Disclosure privacy is structural by construction (the verifier
+never receives a channel carrying the raw value) and is corroborated by
+code-level inspection of the disclosure circuit's public-signal
+interface (Section~4.1) rather than a statistical measurement. Session
+continuity is the one goal that is irreducibly empirical --- behavioral
+detection is a classification problem with a measurable error profile
+--- and is exactly where Chapter~5/6's AUC-ROC, FAR, and FRR figures
+(Table~\ref{tab:lstm_results}) belong.
+
+\begin{table}[htbp]
+\renewcommand{\arraystretch}{1.3}
+\caption{Security Goals Mapped to Evidence Type and Result.}
+\label{tab:goal_evidence}
+\centering
+\footnotesize
+\begin{tabular}{p{1.6cm}p{3.6cm}p{2.4cm}p{4.0cm}}
+\toprule
+\textbf{Goal} & \textbf{Claim} & \textbf{Evidence type} & \textbf{Result} \\
+\midrule
+G1 & Adversary without $s$ cannot authenticate &
+Formal reduction (asymptotic) & Thm.~1: extraction $\Rightarrow$
+$q$-PKE break or Poseidon collision, both $\mathsf{negl}(\lambda)$,
+$\lambda{=}128$ \\[3pt]
+G2 & No information about $s$ leaks across any\ number of sessions &
+Formal reduction (asymptotic) & Thm.~2: simulator indistinguishability
+follows Groth's Theorem~3; nullifier unlinkability as corollary \\[3pt]
+G3 & A captured proof cannot be reused &
+Bounded empirical test + protocol argument & Cor.~1 and
+Scenario~B: \texttt{SISMEMBER} rejects 100\% of resubmitted
+$(\pi,\eta,c)$ tuples prior to Groth16 verification \\[3pt]
+G4 & Verifier learns only the requested\ boolean predicate &
+Structural / by-construction & \S4.1: disclosure circuit's only
+public outputs are $(\rho,\text{predicate},\tau,\text{result})$; $v_k$,
+$\sigma_k$, $k$, and the sibling path are private-input-only \\[3pt]
+G5 & Hijacked sessions are detected and\ forced to re-prove within a\ bounded window &
+Empirical measurement (classification metrics) &
+Table~\ref{tab:lstm_results}: AUC-ROC 0.8157, FAR 6.15\%, FRR 56.68\%
+at the deployed 0.75/0.90 thresholds; Scenario~C walkthrough \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Reading the FAR/FRR Result Against G5 Specifically}
+
+G5 is singled out here because it is the only goal whose supporting
+evidence is a trained statistical model rather than a cryptographic
+guarantee, and the 6.15\% FAR figure in Table~\ref{tab:goal_evidence}
+must be interpreted against \emph{what} a false accept at this layer
+actually exposes --- not against the much stricter bar implied by G1's
+$\mathsf{negl}(\lambda)$ figure for authentication soundness. A false
+accept at the behavioral layer permits continued access to a session
+that G1 has \emph{already} cryptographically authenticated via a valid
+Groth16 proof; it is a continuity-assurance lapse layered \emph{on top
+of} a session whose initial admission is already governed by the
+negligible-probability guarantee of Theorem~1, not an independent path
+to unauthorized access. This is precisely why
+Section~\ref{sec:summary_baseline}'s comparison against
+behavioral-biometric-\emph{only} systems (Section 6.10) treats
+\textsc{ZK-Auth}'s 6.15\% FAR as a materially lower-stakes figure than
+an equivalent FAR reported by a system using behavioral biometrics as
+the \emph{primary} authenticator, where a false accept would be the
+entire authentication decision rather than a secondary check on an
+already-authenticated session.
+
+The corresponding 56.68\% FRR is, by the same logic, a usability cost
+rather than a security exposure: it determines how often a legitimate
+user is asked to re-prove unnecessarily (an annoyance,
+quantified but not separately user-tested in this thesis per
+Limitation~(iv) of Section~7.5), not how often an illegitimate session
+survives. The 0.75/0.90 threshold pair was deliberately tuned toward
+this asymmetry --- minimizing FAR at FRR's expense --- precisely
+because G5's threat model places the cost of a missed detection
+($\mathcal{A}$ retains a hijacked session) above the cost of a false
+alarm (a legitimate user is asked to re-prove), and
+Table~\ref{tab:goal_evidence}'s entry for G5 should be read with that
+asymmetric weighting in mind rather than as a symmetric accuracy
+figure.
+
+\subsection{Where the Mapping Is Incomplete}
+
+Table~\ref{tab:adversary_goal_map}'s entry for $\mathcal{A}$(v) is
+marked as the threat model's weakest-defended mechanism deliberately:
+the mitigation offered (an unpublished, periodically retrained decision
+boundary) is a property of operational obscurity rather than a formal
+or empirically bounded guarantee, in contrast to every other row in the
+table. A determined adversary who can create multiple accounts on the
+platform and harvest their own behavioral telemetry could, in
+principle, characterize the model's general decision surface --- though
+not the victim-specific profile required to actually evade detection on
+a hijacked session, since the LSTM's risk score is conditioned on the
+specific session's deviation from \emph{that session's own} established
+pattern (Section~4.2), not on a population-level decision boundary
+alone. Quantifying this residual risk with an adaptive, model-aware
+adversary is identified here as a direct extension of
+Limitation~(iv)/(v) in Section~7.5, and is the one place in this
+mapping where the evidence column of Table~\ref{tab:goal_evidence}
+rests on an architectural argument rather than either a formal
+reduction or a measured adversarial evaluation.
+
 \section{Attack Scenario Walkthrough}
 
 To make the abstract threat model of Chapter~3 concrete, we trace three
@@ -2247,30 +2600,41 @@ re-authentication (Chapter~3), which the attacker cannot complete without
 the victim's registration secret $s$, terminating the hijacked session
 within the detection window characterized in Chapter~5.
 
-\section{Resolution of Research Challenges}
+\section{How This Thesis Addresses the Motivating Gaps}
 
-\textbf{Challenge 1 (Proof complexity and cross-environment viability):}
-Addressed through Circom 2.x circuit optimization (932 constraints) and
-Web Worker / WebView WASM execution, with empirical validation across
-four environments (Chapter~5) demonstrating sub-second proving latency
-even on the slowest measured hardware tier.
+Chapter~1 identified five gaps in the published literature that
+motivated this work. This section ties each one back to the specific
+result that addresses it.
 
-\textbf{Challenge 2 (Attribute privacy):} Resolved through Poseidon
-Merkle selective disclosure (Chapter~4); verifiers receive only boolean
+\textbf{Cross-environment proof latency.} Addressed through Circom 2.x
+circuit optimization (932 constraints) and Web Worker / WebView WASM
+execution, with empirical validation across four environments
+(Chapter~5) demonstrating sub-second proving latency even on the
+slowest measured hardware tier --- not just on a single development
+machine.
+
+\textbf{Attribute-level privacy.} Resolved through Poseidon Merkle
+selective disclosure (Chapter~4); verifiers receive only boolean
 predicate results, never attribute values, with the depth-8 design choice
 justified quantitatively in Section~5.7.
 
-\textbf{Challenge 3 (Session continuity):} Addressed by the LSTM
+\textbf{Session continuity beyond login.} Addressed by the LSTM
 behavioral biometric layer with ZKP step-up re-authentication
 (Chapter~4), trained and evaluated on authentic (not synthetic)
 behavioral data, achieving AUC-ROC 0.8157 (Chapter~5).
 
-\textbf{Challenge 4 (Empirical and theoretical rigor):} Addressed by the
-four-environment benchmark suite (Chapter~5), the ablation studies
+\textbf{Security arguments grounded in the actual circuit.} Addressed by
+the four-environment benchmark suite (Chapter~5), the ablation studies
 justifying the Merkle depth and LSTM window hyperparameters
 (Section~5.7), and the extraction-based soundness reduction (Theorem~1)
 tying the specific Poseidon-bound circuit constraints to Groth16's
 generic-group guarantees, rather than relying on a citation alone.
+
+\textbf{Compatibility with existing OAuth deployments.} Addressed by
+implementing \textsc{ZK-Auth} as a working OAuth~2.0 Authorization
+Server (Section~\ref{sec:oauth_zkp}), so the ZKP substitutes only for
+the password-entry step of the Authorization Code grant rather than
+requiring institutions to discard existing relying-party integrations.
 
 \section{Limitations}
 
@@ -2278,7 +2642,8 @@ generic-group guarantees, rather than relying on a citation alone.
 provides mouse dynamics only; the live telemetry pipeline's six-feature
 vector includes keyboard dwell and scroll delta, which are zero
 throughout the current training corpus. Extending training to a combined
-dataset (e.g., Balabit plus a keystroke-dynamics corpus) is identified as
+dataset (e.g., Balabit plus a public keystroke-dynamics corpus such as
+the CMU keystroke benchmark~\cite{killourhy09}) is identified as
 near-term future work.
 
 \textit{(ii) Trusted setup:} the public Hermez transcript is used rather
@@ -2312,64 +2677,102 @@ functionally validated for single-institution onboarding and credential
 signing but has not been load-tested under simultaneous multi-tenant
 traffic.
 
-\section{Future Directions}
-
-Future extensions to this work include: completing the Merkle-depth and
-LSTM-window ablations with measured (rather than derived) data at all
-settings; multi-modal behavioral training incorporating keyboard and
-scroll telemetry alongside mouse dynamics; iOS WKWebView benchmarking to
-complete cross-platform mobile coverage; lattice-based (LWE) post-quantum
-ZKP constructions as a long-term hedge against quantum cryptanalysis of
-BN254's discrete-logarithm assumption; FPGA-based multi-scalar-
-multiplication acceleration for edge-device proving, building on the
-acceleration techniques surveyed in Chapter~2~\cite{butt2024}; threshold
-multi-party signing for institutional key custody, removing the single-
-point-of-trust inherent in a single Ed25519 signing key per institution;
-and integration of \textsc{ZK-Auth} authentication with a complementary
-attribute-based encryption access-control layer, as motivated by the
-ABE survey in Chapter~2~\cite{prasad2025abereview}.
+Each limitation above points to a concrete extension: completing the
+Merkle-depth and LSTM-window ablations with measured (rather than
+derived) data at all settings; multi-modal behavioral training
+incorporating keyboard and scroll telemetry alongside mouse dynamics;
+iOS WKWebView benchmarking to complete cross-platform mobile coverage;
+lattice-based (LWE) post-quantum ZKP constructions as a long-term hedge
+against quantum cryptanalysis of BN254's discrete-logarithm assumption;
+FPGA-based multi-scalar-multiplication acceleration for edge-device
+proving, building on the acceleration techniques surveyed in
+Chapter~2~\cite{butt2024}; threshold multi-party signing for
+institutional key custody, removing the single-point-of-trust inherent
+in a single Ed25519 signing key per institution; and integration of
+\textsc{ZK-Auth} authentication with a complementary attribute-based
+encryption access-control layer, as motivated by the ABE survey in
+Chapter~2~\cite{prasad2025abereview}. Chapter~8 returns to these
+directions at a higher level alongside the thesis's overall conclusions.
 
 %==============================================================================
 \chapter{Conclusion}
 %==============================================================================
 
-This thesis presented \textsc{ZK-Auth}, a deployable authentication
-infrastructure combining a 932-constraint Groth16 zero-knowledge proof
-circuit over BN254, Poseidon Merkle selective disclosure, LSTM behavioral
-biometric session continuity trained on authentic public telemetry data,
-and multi-tenant Ed25519 institutional credential issuance. The system
-was implemented end-to-end and empirically evaluated across four
-heterogeneous deployment environments---a Node.js server, a Chrome
-browser client, and two Android devices spanning a flagship-to-midrange
-hardware spread---demonstrating a median end-to-end authentication
-latency of 132.51\,ms on the server reference environment (23\% faster
-than an Argon2id password-hashing baseline) and proof-generation times
-remaining within sub-second bounds across the full measured client
-hardware range, from 61.93\,ms (Node.js) to 361.0\,ms (mid-tier Android
-tablet).
+\section{Conclusion}
 
-The behavioral biometric subsystem, evaluated on the public Balabit
-Mouse Dynamics Challenge dataset rather than synthetic data, achieved an
-AUC-ROC of 0.8157 with a 6.15\% false-acceptance rate at the operating
-threshold, and the ablation studies of Chapter~5 provided a quantitative
-rather than purely qualitative justification for the system's central
-architectural hyperparameters---Merkle tree depth and LSTM window length.
-A formal extraction-based reduction (Theorem~1) demonstrated explicitly
-how the auth circuit's shared-witness construction preserves Groth16's
-generic-group soundness guarantee for the specific Poseidon-bound
-commitment and nullifier bindings used in this system, going beyond a
-citation-only security argument.
+This thesis set out to build and evaluate \textsc{ZK-Auth}, an
+authentication system that replaces the password step of a conventional
+login with a zero-knowledge proof, while keeping the system compatible
+with OAuth 2.0 so it can sit inside existing relying-party integrations
+rather than requiring institutions to rebuild their login stack from
+scratch. The system combines a 932-constraint Groth16 circuit over
+BN254, a depth-8 Poseidon Merkle tree for selective attribute disclosure,
+an LSTM-based behavioral biometric layer for continuous session
+assurance, and a multi-tenant Ed25519 credential issuance scheme for
+institutions.
 
-Taken together, these results demonstrate that zero-knowledge-proof-based
-authentication is not merely privacy-preserving in theoretical
-construction but practically deployable at production-acceptable latency
-across the realistic spread of consumer client hardware, with direct
-implications for cloud security architecture, decentralized identity
-infrastructure, and regulatory compliance under India's DPDP Act 2023 and
-the EU's GDPR. The complete implementation, including circuit sources,
-compiled proving artifacts, benchmark scripts, and the Flutter mobile
-client, is maintained in the project's public repository to support
-independent reproduction of every quantitative claim made in this thesis.
+The system was implemented end-to-end, not just designed on paper, and
+was tested across four genuinely different environments: a Node.js
+server, a Chrome browser running the proof in a Web Worker, and two
+Android phones/tablets of different hardware tiers. The headline result
+is a median end-to-end login time of 132.51\,ms on the server
+reference environment, which is 23\% faster than hashing a password with
+Argon2id alone---meaning the privacy benefit of zero-knowledge
+authentication did not come at a latency cost in this comparison. Proof
+generation on the slowest tested device (a mid-tier Android tablet) was
+still under 400\,ms, comfortably within what a user would tolerate at
+login.
+
+The behavioral biometric layer, trained on the public Balabit Mouse
+Dynamics dataset rather than synthetic data, reached an AUC-ROC of
+0.8157 with a 6.15\% false-acceptance rate. Because this layer only ever
+acts as a secondary check on top of an already-proven login---not as the
+primary authenticator---its accuracy figures matter less than they would
+in a system relying on behavioral signals alone. On the theoretical
+side, Chapter~7's extraction-based reduction (Theorem~1) shows explicitly
+how the specific Poseidon-bound commitment and nullifier constraints in
+the auth circuit inherit Groth16's soundness guarantee, rather than
+asserting this by citation.
+
+Taken together, these results support the central claim of this thesis:
+zero-knowledge authentication is not just an interesting idea on paper,
+it can be deployed at production-acceptable latency across the kind of
+mixed device fleet a real user base actually has, and it can be done
+without discarding the OAuth-based delegation that most relying parties
+already depend on. This has direct relevance for cloud security
+architecture, decentralized identity systems, and compliance with privacy
+regulation such as India's DPDP Act 2023 and the EU's GDPR, both of which
+reward exactly the kind of data minimization this architecture provides
+by construction.
+
+\section{Future Work}
+
+A few directions were identified during this work as worth pursuing
+further but outside the scope of this thesis.
+
+The behavioral model currently sees only mouse telemetry, because the
+Balabit dataset does not include keyboard or scroll data; retraining on a
+combined dataset that adds keystroke dynamics would let the model use
+the full six-feature telemetry vector the live pipeline already
+collects. The Merkle-depth and LSTM-window ablations in Chapter~5 use
+linearly-derived estimates at the untested settings (depth-4/16,
+window-20/100); recompiling the disclosure circuit and retraining the
+model at those settings would replace those estimates with measured
+numbers. The trusted setup currently reuses the public Hermez ceremony;
+a deployment-specific ceremony would tighten the trust assumption
+behind Theorem~1, although the broad public participation in the
+existing ceremony already provides reasonable assurance. iOS WKWebView
+benchmarking was not possible during this work due to device
+availability and remains open. Longer-term, FPGA-based proving
+acceleration, threshold multi-party signing for institutional key
+custody, and pairing \textsc{ZK-Auth} with a complementary
+attribute-based encryption layer are all natural extensions building on
+the work surveyed in Chapter~2.
+
+The complete implementation, including circuit sources, compiled proving
+artifacts, benchmark scripts, and the Flutter mobile client, is kept in
+the project's public repository so that every quantitative claim made in
+this thesis can be independently reproduced.
 
 %==============================================================================
 % PUBLICATIONS
@@ -2385,7 +2788,7 @@ independent reproduction of every quantitative claim made in this thesis.
 
   \item Abhay Dandge, Sameeksha Prasad, and Namita Tiwari. ``A Comprehensive Review of Zero-Knowledge Proofs in Attribute-Based Encryption Frameworks.'' \textit{First International Conference on Nexus of Digitalization, Intelligence and Applications 2026}. \textbf{(Accepted)}
 
-  \item Abhay Dandge, Sameeksha Prasad, and Namita Tiwari. ``ZK-Auth: A Zero-Knowledge Proof-Based Authentication Framework with Selective Disclosure and Continuous Behavioral Biometric Verification.''
+  \item Abhay Dandge, Sameeksha Prasad, and Namita Tiwari. ``ZK-Auth: A Zero-Knowledge Proof-Based Authentication Framework for Cloud Computing.''
 \end{enumerate}
 
 %==============================================================================
@@ -2399,6 +2802,11 @@ independent reproduction of every quantitative claim made in this thesis.
 \bibitem{goldreich94}
 O. Goldreich and Y. Oren, ``Definitions and properties of zero-knowledge proof
 systems,'' \textit{J. Cryptology}, vol.~7, no.~1, pp.~1--32, 1994.
+
+\bibitem{gmr89}
+S. Goldwasser, S. Micali, and C. Rackoff, ``The knowledge complexity of
+interactive proof systems,'' \textit{SIAM J. Computing}, vol.~18, no.~1,
+pp.~186--208, 1989.
 
 \bibitem{bfm88}
 M. Blum, P. Feldman, and S. Micali, ``Non-interactive zero-knowledge and its
@@ -2553,6 +2961,39 @@ EuroS\&P}, 2016, pp.~292--302.
 S. Cantor, J. Kemp, R. Philpott, and E. Maler, ``Assertions and Protocols for
 the OASIS Security Assertion Markup Language (SAML) V2.0,'' OASIS Standard, 2005.
 
+\bibitem{merkle88}
+R. C. Merkle, ``A digital signature based on a conventional encryption
+function,'' in \textit{Proc. CRYPTO 1987}, LNCS vol.~293, Springer,
+pp.~369--378, 1988.
+
+\bibitem{killourhy09}
+K. S. Killourhy and R. A. Maxion, ``Comparing anomaly-detection algorithms
+for keystroke dynamics,'' in \textit{Proc. IEEE/IFIP Int. Conf. on
+Dependable Systems and Networks (DSN)}, 2009, pp.~125--134.
+
+\bibitem{bonneau12}
+J. Bonneau, C. Herley, P. C. van Oorschot, and F. Stajano, ``The quest to
+replace passwords: A framework for comparative evaluation of web
+authentication schemes,'' in \textit{Proc. IEEE Symposium on Security and
+Privacy (S\&P)}, 2012, pp.~553--567.
+
+\bibitem{camenisch04}
+J. Camenisch and A. Lysyanskaya, ``Signature schemes and anonymous
+credentials from bilinear maps,'' in \textit{Proc. CRYPTO 2004}, LNCS
+vol.~3152, Springer, pp.~56--72, 2004.
+
 \end{thebibliography}
+
+%==============================================================================
+% ORIGINALITY REPORT (Turnitin)
+%==============================================================================
+\clearpage
+\chapter*{Originality Report}
+\addcontentsline{toc}{chapter}{Originality Report}
+
+\vspace{2cm}
+\begin{center}
+\textit{[Turnitin originality/similarity report to be inserted here.]}
+\end{center}
 
 \end{document}

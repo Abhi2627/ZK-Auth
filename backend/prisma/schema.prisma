@@ -201,6 +201,56 @@ model RecoveryCode {
   @@schema("auth")
 }
 
+// ─── OAuth Clients ──────────────────────────────────────────────────────────────
+// Registered relying parties for the OAuth 2.0 + ZKP Authorization Code flow.
+// clientSecretHash is SHA-256(client_secret) for confidential clients; public
+// clients (e.g. SPAs) leave it null and MUST use PKCE. redirectUris is an
+// exact-match allow-list (RFC 6749 §3.1.2.3 — never wildcard-matched).
+model OAuthClient {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId          String                    @unique @map("client_id")
+  clientSecretHash  String?                   @map("client_secret_hash")
+  redirectUris      String[]                  @map("redirect_uris")
+  scopes            String[]
+  isActive          Boolean                   @default(true) @map("is_active")
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  authorizationCodes OAuthAuthorizationCode[]
+
+  @@index([clientId])
+  @@map("oauth_clients")
+  @@schema("auth")
+}
+
+// ─── OAuth Authorization Codes ──────────────────────────────────────────────────
+// Short-lived (60s) opaque codes minted AFTER a ZKP proof is verified and its
+// nullifier recorded. Single-use (isUsed) — reuse triggers session revocation
+// (RFC 6749 §4.1.2). nullifierHash binds the code to the exact proof for audit.
+model OAuthAuthorizationCode {
+  code                String       @id                          // opaque, 64+ chars of entropy
+  clientId            String       @map("client_id") @db.Uuid   // references oauth_clients.id
+  userId              String       @map("user_id") @db.Uuid
+  redirectUri         String       @map("redirect_uri")
+  scope               String
+  state               String?
+  codeChallenge       String?      @map("code_challenge")
+  codeChallengeMethod String?      @map("code_challenge_method")
+  nullifierHash       String       @map("nullifier_hash")
+  isUsed              Boolean      @default(false) @map("is_used")
+  expiresAt           DateTime     @map("expires_at") @db.Timestamptz
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  client              OAuthClient  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("oauth_authorization_codes")
+  @@schema("auth")
+}
+
 // =============================================================================
 // SCHEMA: zkp
 // =============================================================================

@@ -213,9 +213,10 @@ export class RecoveryService {
     // ── 3. Verify mnemonic with Argon2id (memory-hard, ~300ms) ────────────
     let isValid = false;
     try {
-      isValid = await argon2.verify(activeCode.codeHash, mnemonic, {
-        type: argon2.argon2id,
-      });
+      // argon2.verify auto-detects the variant (argon2id) from the encoded
+      // hash string, so no `type` option is needed (and VerifyOptions does not
+      // accept one — it only takes an optional `secret`).
+      isValid = await argon2.verify(activeCode.codeHash, mnemonic);
     } catch {
       throw new UnauthorizedError('Recovery failed');
     }

@@ -106,7 +106,10 @@ export function attachWebSocketServer(server: http.Server): void {
     if (!token) {
       socket.write('HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Bearer\r\n\r\n');
       socket.destroy();
-      logger.warn({ ip: socket.remoteAddress }, 'WS upgrade rejected: no token');
+      logger.warn(
+        { ip: (socket as import('net').Socket).remoteAddress },
+        'WS upgrade rejected: no token',
+      );
       return;
     }
 

@@ -34,7 +34,7 @@ export interface DIDVerificationMethod {
   id:                 string;     // e.g. "did:web:gov.example.com#key-1"
   type:               'JsonWebKey2020' | 'Ed25519VerificationKey2020' | 'ZkAuthKey2024';
   controller:         string;     // DID that controls this key
-  publicKeyJwk?:      JsonWebKey;
+  publicKeyJwk?:      Record<string, unknown>;   // JWK object (DOM's JsonWebKey type is unavailable in a Node lib target)
   publicKeyMultibase?: string;    // multibase-encoded public key
   /** ZK-Auth extension: Poseidon commitment for ZKP-based auth */
   poseidonCommitment?: string;    // hex field element

@@ -43,15 +43,15 @@ export type ChallengeRequest = z.infer<typeof challengeRequestSchema>;
 
 const groth16ProofSchema = z
   .object({
-    pi_a: z
-      .array(z.string())
-      .length(3, { message: 'pi_a must have exactly 3 elements' }),
-    pi_b: z
-      .array(z.array(z.string()).length(2))
-      .length(3, { message: 'pi_b must have exactly 3 rows of 2 elements' }),
-    pi_c: z
-      .array(z.string())
-      .length(3, { message: 'pi_c must have exactly 3 elements' }),
+    // z.tuple (not z.array().length) so the inferred type is a fixed-length
+    // tuple [string, string, string] matching Groth16Proof, not string[].
+    pi_a: z.tuple([z.string(), z.string(), z.string()]),
+    pi_b: z.tuple([
+      z.tuple([z.string(), z.string()]),
+      z.tuple([z.string(), z.string()]),
+      z.tuple([z.string(), z.string()]),
+    ]),
+    pi_c: z.tuple([z.string(), z.string(), z.string()]),
     protocol: z.literal('groth16', {
       errorMap: () => ({ message: 'Only groth16 protocol is supported' }),
     }),

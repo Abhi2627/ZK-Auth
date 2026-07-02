@@ -17,9 +17,15 @@ const fieldElementSchema = z
 
 const groth16ProofSchema = z
   .object({
-    pi_a: z.array(z.string()).length(3),
-    pi_b: z.array(z.array(z.string()).length(2)).length(3),
-    pi_c: z.array(z.string()).length(3),
+    // z.tuple so the inferred type is a fixed-length tuple matching the
+    // DisclosureProofInput.proof shape, not string[] / string[][].
+    pi_a: z.tuple([z.string(), z.string(), z.string()]),
+    pi_b: z.tuple([
+      z.tuple([z.string(), z.string()]),
+      z.tuple([z.string(), z.string()]),
+      z.tuple([z.string(), z.string()]),
+    ]),
+    pi_c: z.tuple([z.string(), z.string(), z.string()]),
     protocol: z.literal('groth16'),
     curve: z.literal('bn254'),
   })

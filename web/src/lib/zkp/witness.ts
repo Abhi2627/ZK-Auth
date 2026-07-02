@@ -10,9 +10,10 @@
  *   2. nullifier in publicSignals matches what snarkjs derives in the proof
  *
  * Poseidon implementation:
- *   We implement the BN254 Poseidon permutation (t=2, width=3, 8+57 rounds)
- *   matching the circomlib implementation used in auth.circom. This avoids
- *   importing circomlibjs (large, ESM issues with Next.js App Router).
+ *   We use circomlibjs's buildPoseidon (dynamically imported), which ships the
+ *   exact circomlib Poseidon parameterisation used by auth.circom — same round
+ *   constants, same BN254 field, same output. The dynamic import keeps it out
+ *   of the initial bundle and avoids the Next.js App Router ESM issues.
  *
  * BN254 scalar field modulus p:
  *   21888242871839275222246405745257275088548364400416034343698204186575808495617
@@ -87,8 +88,10 @@ export async function computeCommitment(secretHex: string): Promise<string> {
 
 /**
  * Compute the nullifier = Poseidon([secret, nonce]).
- * Matches auth.circom's nullifier_hash output.
- * Used to derive publicSignals[0] for the mock proof fallback.
+ * Matches auth.circom's nullifier_hash output (publicSignals[0]).
+ * Used by the login and behavioral-auth flows to display / pre-compute the
+ * nullifier client-side; the authoritative value still comes from the Groth16
+ * proof's public signals verified server-side.
  *
  * @param secretHex — 64-char hex secret
  * @param nonceHex  — 64-char hex nonce from challenge

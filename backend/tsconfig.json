@@ -18,10 +18,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "experimentalDecorators": false,
-    "paths": {
-      "@zk-auth/types": ["../packages/types/src/index.ts"]
-    }
+    "experimentalDecorators": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]

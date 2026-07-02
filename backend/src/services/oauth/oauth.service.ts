@@ -129,9 +129,14 @@ export class OAuthService {
       clientId: client.clientId,
       redirectUri: params.redirectUri,
       scope: grantedScopes.join(' '),
-      state: params.state,
-      codeChallenge: params.codeChallenge,
-      codeChallengeMethod: params.codeChallengeMethod,
+      // Omit optional keys when undefined (exactOptionalPropertyTypes).
+      ...(params.state !== undefined ? { state: params.state } : {}),
+      ...(params.codeChallenge !== undefined
+        ? { codeChallenge: params.codeChallenge }
+        : {}),
+      ...(params.codeChallengeMethod !== undefined
+        ? { codeChallengeMethod: params.codeChallengeMethod }
+        : {}),
     };
   }
 
@@ -172,7 +177,11 @@ export class OAuthService {
       'OAuth authorization code issued following ZKP verification',
     );
 
-    return { code, state: input.validated.state, redirectUri: input.validated.redirectUri };
+    return {
+      code,
+      ...(input.validated.state !== undefined ? { state: input.validated.state } : {}),
+      redirectUri: input.validated.redirectUri,
+    };
   }
 
   // ─── Step 3: exchange the code for a real session (access/refresh token) ─

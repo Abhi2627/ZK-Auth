@@ -384,9 +384,11 @@ export class DIDRegistryService {
         contentType: 'application/did+json',
         retrieved:   timestamp,
       },
+      // Conditional spreads: under exactOptionalPropertyTypes an optional key
+      // must be omitted rather than set to `undefined`.
       didDocumentMetadata: {
-        created: doc.created,
-        updated: doc.updated,
+        ...(doc.created !== undefined ? { created: doc.created } : {}),
+        ...(doc.updated !== undefined ? { updated: doc.updated } : {}),
       },
     };
   }
@@ -399,7 +401,7 @@ export class DIDRegistryService {
     return {
       didDocument: null,
       didResolutionMetadata: {
-        error,
+        ...(error !== undefined ? { error } : {}),
         message,
         retrieved: timestamp,
       },

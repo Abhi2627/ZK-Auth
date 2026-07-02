@@ -258,15 +258,21 @@ export async function postVerify(
       logger.info({ userId: verifyResult.userId }, 'Account re-activated after key recovery');
     }
 
-    // Consume challenge
-    await challengeService.consume(challenge_id);
-
-    // Register nullifier (two-phase atomic — T4 mitigation)
+    // Register nullifier FIRST (two-phase atomic — T4 mitigation).
+    // Ordering matters: the nullifier is the durable replay guard, so it must be
+    // committed before the challenge is consumed. If the process crashes between
+    // the two steps, the nullifier is already recorded — a retry with the same
+    // proof is rejected at the nullifier gate, and the stale challenge simply
+    // expires. The reverse order could leave a consumed challenge with no
+    // durable nullifier record.
     await nullifierService.register({
       nullifierHash:  verifyResult.nullifierHash,
       userId:         verifyResult.userId,
       challengeId:    challenge_id,
     });
+
+    // Consume challenge (Redis DEL + PG mark CONSUMED)
+    await challengeService.consume(challenge_id);
 
     // ── OAuth branch ─────────────────────────────────────────────────────
     // If this proof was submitted as part of an OAuth Authorization Code
@@ -280,23 +286,51 @@ export async function postVerify(
     // (non-OAuth) login path below.
     const oauthContext = (body as { oauth_context?: ValidatedAuthorizeRequest }).oauth_context;
     if (oauthContext) {
+      // ── SECURITY: never trust the client-supplied oauth_context ──────────────
+      // The frontend round-trips this object, so an attacker can forge its
+      // redirectUri / scope / client identity. Re-validate it server-side
+      // against the registered OAuthClient so that redirect_uri (exact-match
+      // allow-list, RFC 6749 §3.1.2.3), granted scopes, and clientDbId are all
+      // re-derived from the database — NOT taken from the request body. We then
+      // mint the code from the freshly validated object, discarding the
+      // client-supplied fields entirely.
+      // Build params with conditional spreads: under exactOptionalPropertyTypes
+      // an optional key must be OMITTED rather than set to `undefined`.
+      const revalidated = await oauthService.validateAuthorizeRequest({
+        clientId:     oauthContext.clientId,
+        redirectUri:  oauthContext.redirectUri,
+        responseType: 'code',
+        scope:        oauthContext.scope,
+        ...(oauthContext.state !== undefined ? { state: oauthContext.state } : {}),
+        ...(oauthContext.codeChallenge !== undefined
+          ? { codeChallenge: oauthContext.codeChallenge }
+          : {}),
+        ...(oauthContext.codeChallengeMethod !== undefined
+          ? { codeChallengeMethod: oauthContext.codeChallengeMethod }
+          : {}),
+      });
+
       const { code, state, redirectUri } = await oauthService.issueAuthorizationCode({
-        validated: oauthContext,
-        userId: verifyResult.userId,
+        validated:     revalidated,
+        userId:        verifyResult.userId,
         nullifierHash: verifyResult.nullifierHash,
       });
 
       logger.info(
-        { userId: verifyResult.userId, clientId: oauthContext.clientId },
+        { userId: verifyResult.userId, clientId: revalidated.clientId },
         'Authentication successful — OAuth authorization code issued',
       );
 
+      const redirectLocation =
+        `${redirectUri}?code=${encodeURIComponent(code)}` +
+        (state ? `&state=${encodeURIComponent(state)}` : '');
+
       res.status(200).json({
-        flow: 'oauth_authorization_code',
+        flow:         'oauth_authorization_code',
         code,
         state,
         redirect_uri: redirectUri,
-        message: 'Redirect the user to `${redirect_uri}?code=${code}&state=${state}`.',
+        message:      `Redirect the user to ${redirectLocation}`,
       });
       return;
     }

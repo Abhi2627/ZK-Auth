@@ -31,6 +31,16 @@ env/
 dist/
 .pytest_cache/
 
+# Stray virtualenvs from malformed `python -m venv <arg>` commands.
+# These are accidental dirs that only ever contain bin/include/lib + pyvenv.cfg.
+# (\# is escaped because a bare # starts a comment in .gitignore)
+ml-service/\#/
+ml-service/adjust/
+ml-service/different/
+ml-service/if/
+ml-service/path/
+pyvenv.cfg
+
 # ML model artifacts (large binaries — use DVC or separate storage)
 ml-service/models/**/*.keras
 ml-service/models/**/*.h5

@@ -29,6 +29,7 @@
  */
 
 import jwt from 'jsonwebtoken';
+import type { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../../config/database.js';
 import { redis, RedisKeys } from '../../config/redis.js';
 import { sha256, generateId } from '../../utils/crypto.js';
@@ -115,17 +116,21 @@ export class SessionService {
       type: 'refresh',
     };
 
+    // expiresIn comes from env as a plain string (e.g. "15m", "7d"). The
+    // @types/jsonwebtoken v9 SignOptions types it as `number | ms.StringValue`
+    // (a template-literal type), so a bare `string` isn't assignable — cast the
+    // options object to SignOptions since the value is a validated duration.
     const accessToken = jwt.sign(accessPayload, env.JWT_ACCESS_SECRET, {
       expiresIn: env.JWT_ACCESS_EXPIRY,
       issuer: env.JWT_ISSUER,
       audience: env.JWT_AUDIENCE,
-    });
+    } as SignOptions);
 
     const refreshToken = jwt.sign(refreshPayload, env.JWT_REFRESH_SECRET, {
       expiresIn: env.JWT_REFRESH_EXPIRY,
       issuer: env.JWT_ISSUER,
       audience: env.JWT_AUDIENCE,
-    });
+    } as SignOptions);
 
     // ── 2. Hash refresh token for storage (never store raw) ──────────────────
     const refreshTokenHash = sha256(refreshToken);

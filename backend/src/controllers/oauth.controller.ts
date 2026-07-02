@@ -47,10 +47,12 @@ export async function getAuthorize(
       clientId: q.client_id,
       redirectUri: q.redirect_uri,
       responseType: q.response_type,
-      scope: q.scope,
-      state: q.state,
-      codeChallenge: q.code_challenge,
-      codeChallengeMethod: q.code_challenge_method,
+      ...(q.scope !== undefined ? { scope: q.scope } : {}),
+      ...(q.state !== undefined ? { state: q.state } : {}),
+      ...(q.code_challenge !== undefined ? { codeChallenge: q.code_challenge } : {}),
+      ...(q.code_challenge_method !== undefined
+        ? { codeChallengeMethod: q.code_challenge_method }
+        : {}),
     });
 
     // Frontend uses this payload to render the ZKP login widget and to
@@ -106,8 +108,8 @@ export async function postToken(
       code: b.code,
       redirectUri: b.redirect_uri,
       clientId: b.client_id,
-      clientSecret: b.client_secret,
-      codeVerifier: b.code_verifier,
+      ...(b.client_secret !== undefined ? { clientSecret: b.client_secret } : {}),
+      ...(b.code_verifier !== undefined ? { codeVerifier: b.code_verifier } : {}),
     });
 
     // RFC 6749 §5.1 response shape

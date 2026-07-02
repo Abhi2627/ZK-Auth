@@ -171,7 +171,9 @@ export async function postApproveRequest(
         status:          'APPROVED',
         respondedAt:     new Date(),
         approvedClaims:  approved,
-        rejectedClaims:  rejected.length > 0 ? rejected : undefined,
+        // Omit the key when empty rather than passing `undefined` (invalid for a
+        // Prisma JSON field under exactOptionalPropertyTypes).
+        ...(rejected.length > 0 ? { rejectedClaims: rejected } : {}),
       },
     });
 

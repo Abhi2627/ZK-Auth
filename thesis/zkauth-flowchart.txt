@@ -1,0 +1,107 @@
+flowchart TB
+  %% ============ CLIENT ============
+  subgraph CLIENTS["CLIENT — Prover side (secret never leaves device)"]
+    direction TB
+    SECRET["Local secret 32B<br/>localStorage / Keychain"]
+    POSC["Poseidon<br/>commitment = P(secret)<br/>nullifier = P(secret, nonce)"]
+    GROTH["snarkjs.groth16.fullProve<br/>Web Worker / WebView"]
+    TELE["Telemetry capture<br/>mouse / key / scroll / touch"]
+    SECRET --> POSC --> GROTH
+  end
+
+  %% ============ CIRCUITS ============
+  subgraph CIR["ZK CIRCUITS — circom + Groth16 (BN254)"]
+    AUTHCIR["auth.circom<br/>out: commitment_root, nullifier_hash"]
+    DISCIR["merkle_disclosure.circom<br/>depth-8 Merkle + GTE predicate"]
+  end
+
+  %% ============ BACKEND ============
+  subgraph BE["BACKEND — OAuth 2.0 AS + Verifier (Node / Express)"]
+    direction TB
+    MID["Middleware<br/>auth / riskGate / idempotency / rateLimit"]
+    AUTHC["auth.controller<br/>register / challenge / verify / refresh / recover"]
+    CHAL["challenge.service<br/>nonce issue + consume"]
+    ZKP["zkp.service<br/>Groth16 verify + T14 timing pad"]
+    NULL["nullifier.service<br/>T4 two-phase atomic"]
+    SESS["session.service<br/>JWT issue + rotation"]
+    RECOV["recovery.service<br/>BIP-39 + Argon2id"]
+    OAUTH["oauth.service<br/>authorize / code / token"]
+    CRED["credential.service<br/>issuance + Merkle build"]
+    DISC["disclosure.service<br/>predicate proof verify"]
+    RISK["risk.service<br/>step-up trigger"]
+  end
+
+  %% ============ DATA STORES ============
+  subgraph DS["DATA STORES"]
+    direction LR
+    PG[("PostgreSQL<br/>users / sessions / nullifiers<br/>challenges / credentials / oauth")]
+    RD[("Redis<br/>challenge TTL / nullifier SET<br/>session / step-up")]
+    TS[("TimescaleDB<br/>behavior_events / risk_scores")]
+  end
+
+  %% ============ ML SERVICE ============
+  subgraph ML["ML SERVICE — Python / gRPC"]
+    direction TB
+    FEAT["feature_extractor<br/>6-D normalised vector"]
+    WIN["sliding_window<br/>deque maxlen = 50"]
+    LSTM["LSTM 128 -> 64 -> Dense<br/>sigmoid anomaly score"]
+    PRED["predictor<br/>EMA smoothing T8 + jitter T10"]
+    CLS["risk_classifier<br/>LOW / MED / HIGH / CRITICAL"]
+    FEAT --> WIN --> LSTM --> PRED --> CLS
+  end
+
+  %% ---------- REGISTRATION ----------
+  POSC -->|"R1 send commitment + pubkey only"| AUTHC
+  AUTHC -->|"R2 check duplicate (const-time)"| PG
+  AUTHC -->|"R3 BIP-39 + Argon2id hash"| RECOV
+  RECOV -->|"R4 store hash"| PG
+  AUTHC -.->|"R5 return mnemonic ONCE"| SECRET
+
+  %% ---------- CHALLENGE ----------
+  AUTHC -->|"C1 issue"| CHAL
+  CHAL -->|"C2 SET NX nonce TTL 120s"| RD
+  CHAL -->|"C3 audit PENDING"| PG
+  CHAL -.->|"C4 nonce"| POSC
+
+  %% ---------- LOGIN VERIFY ----------
+  GROTH -. proves .-> AUTHCIR
+  GROTH -->|"V1 proof + publicSignals"| AUTHC
+  AUTHC -->|"V2 fetch challenge TTL"| CHAL
+  AUTHC -->|"V3 SISMEMBER fast replay check"| NULL
+  AUTHC -->|"V4 verify + nonce binding"| ZKP
+  ZKP -. vKey .-> AUTHCIR
+  ZKP -->|"V5 find user by commitment"| PG
+  AUTHC -->|"V6 DEL challenge + CONSUMED"| CHAL
+  AUTHC -->|"V7 register nullifier"| NULL
+  NULL -->|"V8 SADD gate"| RD
+  NULL -->|"V9 INSERT unique"| PG
+
+  %% ---------- OAUTH vs SESSION ----------
+  AUTHC -->|"V10a OAuth branch"| OAUTH
+  OAUTH -->|"code 60s"| PG
+  AUTHC -->|"V10b direct login"| SESS
+  SESS -->|"SHA-256 refresh hash"| PG
+  SESS -->|"seed risk = LOW"| RD
+
+  %% ---------- SELECTIVE DISCLOSURE ----------
+  CRED -->|"D1 leaf=P(value,salt) build tree"| DISCIR
+  CRED -->|"D2 store root + leaves + salts"| PG
+  GROTH -->|"D3 predicate proof"| DISC
+  DISC -. vKey .-> DISCIR
+  DISC -->|"D4 check ACTIVE + root match"| PG
+  DISC -.->|"D5 boolean only (value hidden)"| CLIENTS
+
+  %% ---------- BEHAVIORAL RISK + STEP-UP ----------
+  TELE -->|"B1 WebSocket stream"| MID
+  MID -->|"B2 relay"| RISK
+  RISK -->|"B3 gRPC stream"| FEAT
+  CLS -->|"B4 RiskScore"| RISK
+  RISK -->|"B5 update session / step-up"| RD
+  RISK -->|"B6 write score"| TS
+  RISK -.->|"B7 STEP_UP_REQUIRED (WS)"| CLIENTS
+  MID -.->|"B8 gate reads step-up"| RD
+
+  %% ---------- RECOVERY ----------
+  AUTHC -->|"X1 recover: verify mnemonic"| RECOV
+  RECOV -->|"X2 burn code + revoke all sessions"| PG
+  RECOV -->|"X3 status PENDING_VERIFY + 15m token"| PG

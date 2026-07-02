@@ -162,12 +162,25 @@ template MerkleDisclosure(DEPTH, N_BITS) {
     //
     // Constraint: LessThan(threshold, leaf_value + 1) === 1
     //
-    // Edge case: if leaf_value == MAX_VALUE, leaf_value + 1 overflows N_BITS.
-    // This is handled by LessThan's internal range check — values must fit in
-    // N_BITS bits. The witness generator will fail before proof generation if
-    // leaf_value >= 2^N_BITS. Add an out-of-circuit check in the service layer.
+    // SOUNDNESS: leaf_value is a PRIVATE, prover-controlled witness. LessThan(n)
+    // only returns correct results when both inputs lie in [0, 2^n). Without an
+    // explicit range check, a malicious prover could supply an out-of-range
+    // leaf_value that exploits BN254 field wraparound to make gte.out === 1 even
+    // when the true value is below threshold — silently breaking the GTE
+    // guarantee. We therefore constrain BOTH leaf_value and threshold to N_BITS
+    // bits in-circuit. Num2Bits(n) is unsatisfiable for any input >= 2^n, so a
+    // proof for an out-of-range value simply cannot be produced.
+    component vBits = Num2Bits(N_BITS);
+    vBits.in <== leaf_value;
+
+    component tBits = Num2Bits(N_BITS);
+    tBits.in <== threshold;
+
+    // Both inputs are now guaranteed < 2^N_BITS, so leaf_value + 1 <= 2^N_BITS.
+    // Use LessThan(N_BITS + 1) to give the comparator enough headroom for the
+    // +1 without overflowing its own internal range check.
     // ─────────────────────────────────────────────────────────────────────────
-    component gte = LessThan(N_BITS);
+    component gte = LessThan(N_BITS + 1);
     gte.in[0] <== threshold;
     gte.in[1] <== leaf_value + 1;
 

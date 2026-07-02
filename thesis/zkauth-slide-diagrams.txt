@@ -1,0 +1,224 @@
+===============================================================================
+ZK-AUTH — PER-SLIDE MERMAID DIAGRAMS (with cross-slide handoff connectors)
+===============================================================================
+HOW TO USE
+  - Paste ONE block at a time (everything between the "flowchart" line and the
+    next separator) into https://mermaid.live
+  - Dashed yellow nodes labelled "FROM Slide X" / "TO Slide X" are the handoff
+    clues. They are not part of the system — they only show where the previous
+    slide ended and where the next one begins, so the flow never breaks when
+    you move from one slide to the next.
+  - If a diagram is too wide, change "flowchart TB" to "flowchart LR".
+===============================================================================
+
+
+###############################################################################
+# SLIDE 1 — SYSTEM ARCHITECTURE OVERVIEW (the map for all later slides)
+###############################################################################
+
+flowchart TB
+  subgraph CLIENTS["CLIENT (Prover) — Web (Next.js) / Mobile (Flutter)"]
+    SECRET["Local secret 32B<br/>localStorage / Keychain"]
+    PROVER["WASM prover<br/>Poseidon + snarkjs Groth16"]
+    TELE["Telemetry capture<br/>mouse / key / scroll / touch"]
+  end
+
+  subgraph BE["BACKEND — OAuth 2.0 AS + Verifier (Node / Express)"]
+    AUTHC["auth.controller"]
+    SVCS["Services:<br/>challenge / zkp / nullifier /<br/>session / recovery / oauth /<br/>credential / disclosure / risk"]
+    MID["Middleware:<br/>auth / riskGate / idempotency / rateLimit"]
+  end
+
+  subgraph ML["ML SERVICE — Python / gRPC"]
+    LSTM["feature_extractor -> sliding_window<br/>-> LSTM -> predictor -> classifier"]
+  end
+
+  subgraph DS["DATA STORES"]
+    PG[("PostgreSQL<br/>durable records")]
+    RD[("Redis<br/>TTL / atomic gates / cache")]
+    TS[("TimescaleDB<br/>telemetry + risk scores")]
+  end
+
+  CLIENTS -->|"HTTPS: proofs + API"| BE
+  TELE -->|"WebSocket telemetry"| MID
+  BE <-->|"gRPC risk stream"| ML
+  BE <--> DS
+  ML --> TS
+
+  N2["TO Slide 2: Registration"]:::io
+  N3["TO Slide 3: ZK Login"]:::io
+  N4["TO Slide 4: Selective Disclosure"]:::io
+  N5["TO Slide 5: Behavioral Risk + Step-Up"]:::io
+  N6["TO Slide 6: Recovery"]:::io
+  BE -.-> N2
+  BE -.-> N3
+  BE -.-> N4
+  BE -.-> N5
+  BE -.-> N6
+
+  classDef io fill:#fff3cd,stroke:#d39e00,stroke-width:2px,color:#000,stroke-dasharray:5 5;
+
+
+###############################################################################
+# SLIDE 2 — REGISTRATION & KEY SETUP  (one-time)
+###############################################################################
+
+flowchart TB
+  START["FROM Slide 1: new user on Client"]:::io
+
+  START --> A1["Client generates random 32B secret<br/>crypto.getRandomValues"]
+  A1 --> A2["commitment = Poseidon(secret)<br/>computed in browser / WebView"]
+  A2 --> A3["POST /auth/register<br/>send commitment + public key ONLY"]
+  A3 --> A4{"commitment already<br/>registered?"}
+  A4 -- yes --> A5["constant-time ~300ms delay<br/>409 generic error (no enumeration)"]
+  A4 -- no --> A6["create user row (Prisma tx)<br/>status = ACTIVE"]
+  A6 --> A7["recovery.service:<br/>generate BIP-39 mnemonic"]
+  A7 --> A8["Argon2id hash (64MB / 3 passes)<br/>store hash only in recovery_codes"]
+  A8 --> A9["return mnemonic to user ONCE<br/>raw secret + mnemonic never stored"]
+
+  A6 -. writes .-> PG[("PostgreSQL: users")]:::store
+  A8 -. writes .-> PG
+
+  A9 --> NEXT["TO Slide 3: user can now log in<br/>(secret + commitment ready)"]:::io
+
+  classDef io fill:#fff3cd,stroke:#d39e00,stroke-width:2px,color:#000,stroke-dasharray:5 5;
+  classDef store fill:#e7f1ff,stroke:#2b6cb0,color:#000;
+
+
+###############################################################################
+# SLIDE 3 — ZK LOGIN  (challenge -> prove -> verify -> nullifier -> session)
+###############################################################################
+
+flowchart TB
+  START["FROM Slide 2: registered user<br/>(has secret; commitment on server)"]:::io
+
+  subgraph CH["Phase 1 — Challenge"]
+    START --> C1["POST /auth/challenge"]
+    C1 --> C2["challenge.service: 32B random nonce"]
+    C2 --> C3["Redis SET NX nonce (TTL 120s)"]
+    C3 --> C4["PostgreSQL audit: challenge PENDING"]
+    C4 --> C5["return {challenge_id, nonce}"]
+  end
+
+  subgraph PR["Phase 2 — Prove (client)"]
+    C5 --> P1["witness = {nonce, secret} mod field"]
+    P1 --> P2["snarkjs.groth16.fullProve (auth.circom)<br/>in Web Worker"]
+    P2 --> P3["proof + publicSignals<br/>[nullifier, commitment, nonce]"]
+  end
+
+  subgraph VF["Phase 3 — Verify (backend)"]
+    P3 --> V1["POST /auth/verify"]
+    V1 --> V2["fetch challenge (TTL check)"]
+    V2 --> V3{"nullifier already spent?<br/>Redis SISMEMBER"}
+    V3 -- yes --> VX["reject: replay (T4)"]
+    V3 -- no --> V4["nonce binding check<br/>issued nonce == proof nonce"]
+    V4 --> V5["groth16.verify(vKey, signals, proof)<br/>T14 constant-time pad >=50ms"]
+    V5 --> V6{"valid AND user<br/>found by commitment?"}
+    V6 -- no --> VX2["reject: generic error<br/>(no user enumeration)"]
+    V6 -- yes --> V7["consume challenge:<br/>Redis DEL + PG CONSUMED"]
+    V7 --> V8["register nullifier (T4 two-phase):<br/>Redis SADD gate -> PG INSERT unique"]
+  end
+
+  V8 --> BR{"OAuth context<br/>present?"}
+  BR -- yes --> O1["oauth.service: mint auth code (60s)<br/>return code + state + redirect_uri"]
+  BR -- no --> S1["session.service: JWT access 15m + refresh 7d<br/>store SHA-256(refresh) + seed risk LOW"]
+
+  O1 --> NEXTO["TO relying party: /oauth/token exchange"]:::io
+  S1 --> NEXT["TO Slide 5: active session is now<br/>behaviorally monitored"]:::io
+
+  classDef io fill:#fff3cd,stroke:#d39e00,stroke-width:2px,color:#000,stroke-dasharray:5 5;
+
+
+###############################################################################
+# SLIDE 4 — SELECTIVE DISCLOSURE  (issuance + predicate presentation)
+###############################################################################
+
+flowchart TB
+  START["FROM Slide 1: issuer + holder<br/>(authenticated via ZK login)"]:::io
+
+  subgraph ISSUE["A — Credential Issuance (institutional issuer)"]
+    START --> D1["POST issue {attributes}"]
+    D1 --> D2["validate integers in [0, 2^32-1]<br/>sort keys for stable leaf index"]
+    D2 --> D3["leaf_i = Poseidon(value_i, salt_i)<br/>fresh 32B salt per attribute"]
+    D3 --> D4["build depth-8 Poseidon Merkle tree<br/>256 slots, empty = Poseidon(0,0)"]
+    D4 --> D5["store credential(root) + leaves + salts"]
+  end
+
+  subgraph PRESENT["B — Predicate Presentation (holder proves e.g. age >= 18)"]
+    D5 --> E1["holder builds witness:<br/>{leaf_value, salt, path[8], indices[8]}"]
+    E1 --> E2["groth16 proof over<br/>merkle_disclosure.circom"]
+    E2 --> E3["POST /credential/verify-claim<br/>public: [root, threshold, leaf_index]"]
+    E3 --> E4["fetch credential:<br/>ACTIVE + not expired?"]
+    E4 --> E5["assert proof.root == stored root<br/>(anti-substitution)"]
+    E5 --> E6["groth16.verify:<br/>Merkle inclusion + GTE predicate"]
+    E6 --> E7["write audit (hash of signals only)"]
+  end
+
+  D5 -. store .-> PG[("PostgreSQL: credentials")]:::store
+  E7 -. store .-> PG
+
+  E7 --> NEXT["TO Verifier: boolean result only<br/>raw attribute value stays hidden (T6 unlinkable)"]:::io
+
+  classDef io fill:#fff3cd,stroke:#d39e00,stroke-width:2px,color:#000,stroke-dasharray:5 5;
+  classDef store fill:#e7f1ff,stroke:#2b6cb0,color:#000;
+
+
+###############################################################################
+# SLIDE 5 — BEHAVIORAL RISK + STEP-UP  (continuous, on the active session)
+###############################################################################
+
+flowchart TB
+  START["FROM Slide 3: active session (risk = LOW)"]:::io
+
+  START --> B1["Client streams behavior events<br/>over WebSocket"]
+  B1 --> B2["Backend relays via gRPC<br/>(circuit-breaker guarded)"]
+  B2 --> B3["feature_extractor: 6-D normalised vector"]
+  B3 --> B4["sliding_window: deque maxlen = 50"]
+  B4 --> B5{"window full?<br/>(50 events)"}
+  B5 -- no --> B4
+  B5 -- yes --> B6["LSTM 128->64->Dense sigmoid<br/>raw anomaly score [0,1]"]
+  B6 --> B7["EMA smoothing (T8):<br/>0.3*raw + 0.7*prev"]
+  B7 --> B8["classify + jitter (T10)"]
+  B8 --> B9{"smoothed score band"}
+
+  B9 -- "< 0.75 (LOW/MED)" --> L1["push RISK_UPDATE to client<br/>update Redis risk_level"]
+  B9 -- ">= 0.75 (HIGH)" --> K1["SOFT step-up: PIN / TOTP"]
+  B9 -- ">= 0.90 (CRITICAL)" --> H1["HARD step-up: full ZK re-auth"]
+
+  K1 --> M1["Redis stepup:sessionId (TTL 300s)<br/>emit STEP_UP_REQUIRED (WS)"]
+  H1 --> M1
+  M1 --> M2["riskGate middleware blocks<br/>authenticated requests"]
+  M2 --> M3{"re-auth succeeds?"}
+  M3 -- no --> M2
+  M3 -- yes --> M4["resolveStepUp:<br/>clear key, risk -> LOW"]
+
+  L1 -. write .-> TS[("TimescaleDB: risk_scores")]:::store
+  H1 --> NEXT["TO Slide 3: HARD step-up re-runs<br/>the full ZK Login flow"]:::io
+  M4 --> DONE["session continues (risk LOW)"]
+
+  classDef io fill:#fff3cd,stroke:#d39e00,stroke-width:2px,color:#000,stroke-dasharray:5 5;
+  classDef store fill:#e7f1ff,stroke:#2b6cb0,color:#000;
+
+
+###############################################################################
+# SLIDE 6 — ACCOUNT RECOVERY  (lost key)
+###############################################################################
+
+flowchart TB
+  START["FROM Slide 2: user lost device/secret<br/>(still holds BIP-39 mnemonic)"]:::io
+
+  START --> X1["POST /auth/recover<br/>{mnemonic, new commitment, new pubkey}"]
+  X1 --> X2["recovery.service: Argon2id verify<br/>mnemonic vs stored hash (~300ms)"]
+  X2 --> X3{"match?"}
+  X3 -- no --> XF["reject (generic error)"]
+  X3 -- yes --> X4["burn recovery code (atomic)<br/>revoke ALL sessions"]
+  X4 --> X5["replace commitment + pubkey<br/>status -> PENDING_VERIFY"]
+  X5 --> X6["issue 15-min recovery JWT (type=recovery)"]
+
+  X4 -. update .-> PG[("PostgreSQL: users / sessions")]:::store
+  X5 -. update .-> PG
+
+  X6 --> NEXT["TO Slide 3: new device runs ZK Login,<br/>sends X-Recovery-Token -> status back to ACTIVE"]:::io
+
+  classDef io fill:#fff3cd,stroke:#d39e00,stroke-width:2px,color:#000,stroke-dasharray:5 5;
+  classDef store fill:#e7f1ff,stroke:#2b6cb0,color:#000;

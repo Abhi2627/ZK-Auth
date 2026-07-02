@@ -136,9 +136,13 @@ export class ChallengeService {
       if (pgRecord?.status === 'CONSUMED') {
         throw new AppError(ErrorCode.NULLIFIER_REPLAY, 'Challenge already consumed', 400);
       }
-      if (pgRecord?.status === 'EXPIRED' || pgRecord !== null) {
+      // The record exists in PostgreSQL but is gone from Redis. Since CONSUMED is
+      // handled above, any remaining record (EXPIRED, or still-PENDING but past
+      // its Redis TTL) means the challenge window has elapsed.
+      if (pgRecord !== null) {
         throw new AppError(ErrorCode.CHALLENGE_EXPIRED, 'Challenge has expired', 400);
       }
+      // No Redis entry and no PG record — the challenge_id was never issued.
       throw new NotFoundError('Challenge');
     }
 
