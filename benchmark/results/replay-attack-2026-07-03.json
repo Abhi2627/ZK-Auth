@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-07-03T06:27:09.432Z",
+  "api": "http://localhost:3011",
+  "firstAccept": {
+    "ok": true,
+    "ms": 239.28
+  },
+  "replay": {
+    "attempts": 20,
+    "rejected": 20,
+    "rejectionRate": 1,
+    "errorCodes": [
+      "NULLIFIER_REPLAY"
+    ],
+    "medianRejectMs": 2.37
+  },
+  "foreignChallenge": {
+    "status": 404,
+    "code": "NOT_FOUND"
+  },
+  "crossNonce": {
+    "status": 400,
+    "code": "NULLIFIER_REPLAY"
+  }
+}

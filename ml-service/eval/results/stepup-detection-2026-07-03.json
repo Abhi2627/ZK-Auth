@@ -1,0 +1,2459 @@
+{
+  "summary": {
+    "generatedAt": "2026-07-03",
+    "config": {
+      "threshold": 0.9,
+      "alpha": 0.3,
+      "stride": 25,
+      "k": 10,
+      "window_size": 50,
+      "n_features": 6
+    },
+    "intruderSessions": 405,
+    "detectedAnyWindow": 183,
+    "detectionRateSession": 0.4519,
+    "detectedWithinK": 130,
+    "detectionRateWithinK": 0.321,
+    "neverDetected": 222,
+    "neverDetectedRate": 0.5481,
+    "timeToDetectWindows": {
+      "median": 1.0,
+      "mean": 8.246,
+      "min": 1,
+      "max": 72
+    },
+    "modeledSurvivalAtK": 0.003422
+  },
+  "perSession": [
+    {
+      "file": "session_0126772600",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 63
+    },
+    {
+      "file": "session_0170625567",
+      "detected": true,
+      "ttd_windows": 35,
+      "n_windows": 56
+    },
+    {
+      "file": "session_0172860263",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 26
+    },
+    {
+      "file": "session_0172989910",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 30
+    },
+    {
+      "file": "session_0718520474",
+      "detected": true,
+      "ttd_windows": 17,
+      "n_windows": 46
+    },
+    {
+      "file": "session_1196335015",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 14
+    },
+    {
+      "file": "session_1656689994",
+      "detected": true,
+      "ttd_windows": 13,
+      "n_windows": 50
+    },
+    {
+      "file": "session_1928096865",
+      "detected": true,
+      "ttd_windows": 18,
+      "n_windows": 26
+    },
+    {
+      "file": "session_2116060291",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 47
+    },
+    {
+      "file": "session_2177337196",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 67
+    },
+    {
+      "file": "session_2726751248",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 23
+    },
+    {
+      "file": "session_2923450227",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 34
+    },
+    {
+      "file": "session_3315925736",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 24
+    },
+    {
+      "file": "session_3387344935",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 70
+    },
+    {
+      "file": "session_3683562482",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 66
+    },
+    {
+      "file": "session_4066543084",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 215
+    },
+    {
+      "file": "session_4091639526",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 59
+    },
+    {
+      "file": "session_4157921188",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_4383618618",
+      "detected": true,
+      "ttd_windows": 13,
+      "n_windows": 13
+    },
+    {
+      "file": "session_4498932663",
+      "detected": true,
+      "ttd_windows": 21,
+      "n_windows": 66
+    },
+    {
+      "file": "session_4876159319",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 29
+    },
+    {
+      "file": "session_4970622399",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 49
+    },
+    {
+      "file": "session_5046103917",
+      "detected": true,
+      "ttd_windows": 23,
+      "n_windows": 59
+    },
+    {
+      "file": "session_5269540222",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 65
+    },
+    {
+      "file": "session_5346999982",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 40
+    },
+    {
+      "file": "session_5352520893",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 31
+    },
+    {
+      "file": "session_5466872812",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 30
+    },
+    {
+      "file": "session_5476317070",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 7
+    },
+    {
+      "file": "session_5577188457",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 29
+    },
+    {
+      "file": "session_6186753676",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 51
+    },
+    {
+      "file": "session_6695269196",
+      "detected": true,
+      "ttd_windows": 19,
+      "n_windows": 39
+    },
+    {
+      "file": "session_6965771386",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 49
+    },
+    {
+      "file": "session_6974460768",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 57
+    },
+    {
+      "file": "session_7251443361",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 36
+    },
+    {
+      "file": "session_7454853209",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 44
+    },
+    {
+      "file": "session_7562248450",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 66
+    },
+    {
+      "file": "session_7614908860",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 5
+    },
+    {
+      "file": "session_7684485021",
+      "detected": true,
+      "ttd_windows": 3,
+      "n_windows": 10
+    },
+    {
+      "file": "session_7772954143",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 11
+    },
+    {
+      "file": "session_7914718036",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 10
+    },
+    {
+      "file": "session_8014286229",
+      "detected": true,
+      "ttd_windows": 18,
+      "n_windows": 242
+    },
+    {
+      "file": "session_8200552592",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 49
+    },
+    {
+      "file": "session_8271683052",
+      "detected": true,
+      "ttd_windows": 23,
+      "n_windows": 50
+    },
+    {
+      "file": "session_8689827198",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 31
+    },
+    {
+      "file": "session_8701118698",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 33
+    },
+    {
+      "file": "session_8950902312",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 60
+    },
+    {
+      "file": "session_9072596713",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 12
+    },
+    {
+      "file": "session_9693789671",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 72
+    },
+    {
+      "file": "session_9816302916",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 13
+    },
+    {
+      "file": "session_0003960194",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 200
+    },
+    {
+      "file": "session_0128859274",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 63
+    },
+    {
+      "file": "session_0280517098",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 41
+    },
+    {
+      "file": "session_0305187451",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 53
+    },
+    {
+      "file": "session_0326724732",
+      "detected": true,
+      "ttd_windows": 2,
+      "n_windows": 51
+    },
+    {
+      "file": "session_0612796637",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 24
+    },
+    {
+      "file": "session_0647531474",
+      "detected": true,
+      "ttd_windows": 22,
+      "n_windows": 36
+    },
+    {
+      "file": "session_0719528275",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 53
+    },
+    {
+      "file": "session_0861337889",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 69
+    },
+    {
+      "file": "session_1149922141",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 63
+    },
+    {
+      "file": "session_1316321566",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 5
+    },
+    {
+      "file": "session_1618522149",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 225
+    },
+    {
+      "file": "session_1649882646",
+      "detected": true,
+      "ttd_windows": 19,
+      "n_windows": 28
+    },
+    {
+      "file": "session_1750509621",
+      "detected": true,
+      "ttd_windows": 19,
+      "n_windows": 77
+    },
+    {
+      "file": "session_1854610785",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 26
+    },
+    {
+      "file": "session_1968614536",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 59
+    },
+    {
+      "file": "session_2203453961",
+      "detected": true,
+      "ttd_windows": 9,
+      "n_windows": 23
+    },
+    {
+      "file": "session_2375808482",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 19
+    },
+    {
+      "file": "session_2694965772",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 8
+    },
+    {
+      "file": "session_2730276507",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 21
+    },
+    {
+      "file": "session_2931074825",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 55
+    },
+    {
+      "file": "session_2953697423",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 156
+    },
+    {
+      "file": "session_3014121416",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 58
+    },
+    {
+      "file": "session_3051589624",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 89
+    },
+    {
+      "file": "session_3077149461",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 61
+    },
+    {
+      "file": "session_3155649031",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 74
+    },
+    {
+      "file": "session_3603344105",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 52
+    },
+    {
+      "file": "session_3791802350",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 77
+    },
+    {
+      "file": "session_4098569257",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 42
+    },
+    {
+      "file": "session_4290136840",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 25
+    },
+    {
+      "file": "session_4386624259",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 16
+    },
+    {
+      "file": "session_4480398495",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 57
+    },
+    {
+      "file": "session_4762909710",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 43
+    },
+    {
+      "file": "session_4896261465",
+      "detected": true,
+      "ttd_windows": 45,
+      "n_windows": 58
+    },
+    {
+      "file": "session_5023081923",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 54
+    },
+    {
+      "file": "session_5071023384",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 33
+    },
+    {
+      "file": "session_5312030236",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 24
+    },
+    {
+      "file": "session_5594141097",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 9
+    },
+    {
+      "file": "session_5695398064",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 33
+    },
+    {
+      "file": "session_5806761857",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 25
+    },
+    {
+      "file": "session_5958053029",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 29
+    },
+    {
+      "file": "session_6102555994",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 49
+    },
+    {
+      "file": "session_6237417362",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 14
+    },
+    {
+      "file": "session_6320970139",
+      "detected": true,
+      "ttd_windows": 21,
+      "n_windows": 65
+    },
+    {
+      "file": "session_6464183153",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 51
+    },
+    {
+      "file": "session_6568302079",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 5
+    },
+    {
+      "file": "session_6657360579",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 50
+    },
+    {
+      "file": "session_6705777193",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 15
+    },
+    {
+      "file": "session_6751955279",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 32
+    },
+    {
+      "file": "session_6871552747",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 59
+    },
+    {
+      "file": "session_6896514118",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 19
+    },
+    {
+      "file": "session_7035039573",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 40
+    },
+    {
+      "file": "session_7323696974",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 47
+    },
+    {
+      "file": "session_7331556356",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_7471072415",
+      "detected": true,
+      "ttd_windows": 8,
+      "n_windows": 15
+    },
+    {
+      "file": "session_7800269296",
+      "detected": true,
+      "ttd_windows": 6,
+      "n_windows": 15
+    },
+    {
+      "file": "session_7818234002",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 19
+    },
+    {
+      "file": "session_7944252331",
+      "detected": true,
+      "ttd_windows": 17,
+      "n_windows": 55
+    },
+    {
+      "file": "session_7989414599",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 68
+    },
+    {
+      "file": "session_8091715457",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 61
+    },
+    {
+      "file": "session_8351091371",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 28
+    },
+    {
+      "file": "session_8557723888",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 40
+    },
+    {
+      "file": "session_8671492463",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 44
+    },
+    {
+      "file": "session_8740037149",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 41
+    },
+    {
+      "file": "session_8769983957",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 14
+    },
+    {
+      "file": "session_8934034457",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 68
+    },
+    {
+      "file": "session_9501338931",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 50
+    },
+    {
+      "file": "session_9767538073",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 26
+    },
+    {
+      "file": "session_9795347408",
+      "detected": true,
+      "ttd_windows": 20,
+      "n_windows": 23
+    },
+    {
+      "file": "session_9983042278",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 21
+    },
+    {
+      "file": "session_0064281061",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 21
+    },
+    {
+      "file": "session_0408822104",
+      "detected": true,
+      "ttd_windows": 15,
+      "n_windows": 31
+    },
+    {
+      "file": "session_0668352196",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 43
+    },
+    {
+      "file": "session_0859353781",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 46
+    },
+    {
+      "file": "session_0953745782",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 65
+    },
+    {
+      "file": "session_1271171766",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 15
+    },
+    {
+      "file": "session_1386411131",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 37
+    },
+    {
+      "file": "session_1535403881",
+      "detected": true,
+      "ttd_windows": 20,
+      "n_windows": 53
+    },
+    {
+      "file": "session_1976172513",
+      "detected": true,
+      "ttd_windows": 72,
+      "n_windows": 78
+    },
+    {
+      "file": "session_2853115772",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 49
+    },
+    {
+      "file": "session_2977418379",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_3656309644",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 17
+    },
+    {
+      "file": "session_3974162531",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 50
+    },
+    {
+      "file": "session_4026966824",
+      "detected": true,
+      "ttd_windows": 22,
+      "n_windows": 58
+    },
+    {
+      "file": "session_4098547958",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 29
+    },
+    {
+      "file": "session_4265171670",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 42
+    },
+    {
+      "file": "session_4432555629",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 47
+    },
+    {
+      "file": "session_4615055511",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 26
+    },
+    {
+      "file": "session_4794437261",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 21
+    },
+    {
+      "file": "session_5030324559",
+      "detected": true,
+      "ttd_windows": 18,
+      "n_windows": 30
+    },
+    {
+      "file": "session_5041518490",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 14
+    },
+    {
+      "file": "session_5197680121",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 32
+    },
+    {
+      "file": "session_5556934089",
+      "detected": true,
+      "ttd_windows": 12,
+      "n_windows": 31
+    },
+    {
+      "file": "session_5572048254",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 59
+    },
+    {
+      "file": "session_5889567297",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 5
+    },
+    {
+      "file": "session_6119506741",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 18
+    },
+    {
+      "file": "session_6179037141",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 6
+    },
+    {
+      "file": "session_7744249581",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 19
+    },
+    {
+      "file": "session_7986274484",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 80
+    },
+    {
+      "file": "session_7992883230",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 60
+    },
+    {
+      "file": "session_8070684894",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 49
+    },
+    {
+      "file": "session_8364143294",
+      "detected": true,
+      "ttd_windows": 3,
+      "n_windows": 65
+    },
+    {
+      "file": "session_8653789319",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 49
+    },
+    {
+      "file": "session_8819855375",
+      "detected": true,
+      "ttd_windows": 19,
+      "n_windows": 38
+    },
+    {
+      "file": "session_8823455059",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 82
+    },
+    {
+      "file": "session_8857212561",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 54
+    },
+    {
+      "file": "session_8862058156",
+      "detected": true,
+      "ttd_windows": 12,
+      "n_windows": 13
+    },
+    {
+      "file": "session_9830083627",
+      "detected": true,
+      "ttd_windows": 3,
+      "n_windows": 28
+    },
+    {
+      "file": "session_0512046694",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 47
+    },
+    {
+      "file": "session_2320125003",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 38
+    },
+    {
+      "file": "session_2336058051",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 29
+    },
+    {
+      "file": "session_2368259027",
+      "detected": true,
+      "ttd_windows": 14,
+      "n_windows": 30
+    },
+    {
+      "file": "session_3005678154",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 75
+    },
+    {
+      "file": "session_3236365486",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 52
+    },
+    {
+      "file": "session_3379861047",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 49
+    },
+    {
+      "file": "session_4254477956",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 23
+    },
+    {
+      "file": "session_5205618080",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 4
+    },
+    {
+      "file": "session_5445638904",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 37
+    },
+    {
+      "file": "session_5453779030",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 55
+    },
+    {
+      "file": "session_6706849000",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 7
+    },
+    {
+      "file": "session_8627857957",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_8658186994",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 5
+    },
+    {
+      "file": "session_8687623726",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 34
+    },
+    {
+      "file": "session_8833850952",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 61
+    },
+    {
+      "file": "session_9160177818",
+      "detected": true,
+      "ttd_windows": 9,
+      "n_windows": 26
+    },
+    {
+      "file": "session_9646127676",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 67
+    },
+    {
+      "file": "session_9708106289",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 37
+    },
+    {
+      "file": "session_9753314758",
+      "detected": true,
+      "ttd_windows": 4,
+      "n_windows": 10
+    },
+    {
+      "file": "session_0080153528",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 48
+    },
+    {
+      "file": "session_0486100880",
+      "detected": true,
+      "ttd_windows": 30,
+      "n_windows": 55
+    },
+    {
+      "file": "session_0733542929",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 24
+    },
+    {
+      "file": "session_1376706431",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 49
+    },
+    {
+      "file": "session_2037079652",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 11
+    },
+    {
+      "file": "session_2305469177",
+      "detected": true,
+      "ttd_windows": 36,
+      "n_windows": 59
+    },
+    {
+      "file": "session_2383353199",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 65
+    },
+    {
+      "file": "session_2547686354",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 75
+    },
+    {
+      "file": "session_3567705649",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 32
+    },
+    {
+      "file": "session_3735387695",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 7
+    },
+    {
+      "file": "session_5035531254",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 54
+    },
+    {
+      "file": "session_5226344095",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 13
+    },
+    {
+      "file": "session_6410652005",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 26
+    },
+    {
+      "file": "session_6723163956",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_6803917267",
+      "detected": true,
+      "ttd_windows": 22,
+      "n_windows": 54
+    },
+    {
+      "file": "session_6891188294",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 46
+    },
+    {
+      "file": "session_7053852427",
+      "detected": true,
+      "ttd_windows": 3,
+      "n_windows": 35
+    },
+    {
+      "file": "session_7756203951",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 66
+    },
+    {
+      "file": "session_7800887945",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 48
+    },
+    {
+      "file": "session_8456906043",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 15
+    },
+    {
+      "file": "session_8675020847",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 25
+    },
+    {
+      "file": "session_8957360206",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 77
+    },
+    {
+      "file": "session_0542118784",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 67
+    },
+    {
+      "file": "session_0590731055",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 47
+    },
+    {
+      "file": "session_0750796173",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 64
+    },
+    {
+      "file": "session_1414301302",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 8
+    },
+    {
+      "file": "session_1581692104",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 19
+    },
+    {
+      "file": "session_1799284692",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 8
+    },
+    {
+      "file": "session_2020107805",
+      "detected": true,
+      "ttd_windows": 9,
+      "n_windows": 71
+    },
+    {
+      "file": "session_2222178768",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 83
+    },
+    {
+      "file": "session_3436410606",
+      "detected": true,
+      "ttd_windows": 14,
+      "n_windows": 52
+    },
+    {
+      "file": "session_3496233301",
+      "detected": true,
+      "ttd_windows": 4,
+      "n_windows": 15
+    },
+    {
+      "file": "session_3760606976",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 41
+    },
+    {
+      "file": "session_3922157039",
+      "detected": true,
+      "ttd_windows": 9,
+      "n_windows": 38
+    },
+    {
+      "file": "session_4144841412",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 65
+    },
+    {
+      "file": "session_4185228735",
+      "detected": true,
+      "ttd_windows": 39,
+      "n_windows": 61
+    },
+    {
+      "file": "session_5138848212",
+      "detected": true,
+      "ttd_windows": 3,
+      "n_windows": 41
+    },
+    {
+      "file": "session_5536570637",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 14
+    },
+    {
+      "file": "session_5652085012",
+      "detected": true,
+      "ttd_windows": 20,
+      "n_windows": 47
+    },
+    {
+      "file": "session_5653345386",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 97
+    },
+    {
+      "file": "session_5967488943",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 59
+    },
+    {
+      "file": "session_6200753435",
+      "detected": true,
+      "ttd_windows": 9,
+      "n_windows": 27
+    },
+    {
+      "file": "session_7144916399",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 58
+    },
+    {
+      "file": "session_7398972341",
+      "detected": true,
+      "ttd_windows": 9,
+      "n_windows": 12
+    },
+    {
+      "file": "session_7434938340",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 57
+    },
+    {
+      "file": "session_8427974282",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 30
+    },
+    {
+      "file": "session_8431086878",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 92
+    },
+    {
+      "file": "session_8831138885",
+      "detected": true,
+      "ttd_windows": 16,
+      "n_windows": 34
+    },
+    {
+      "file": "session_8916797638",
+      "detected": true,
+      "ttd_windows": 12,
+      "n_windows": 53
+    },
+    {
+      "file": "session_9034407980",
+      "detected": true,
+      "ttd_windows": 4,
+      "n_windows": 5
+    },
+    {
+      "file": "session_9127984644",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 86
+    },
+    {
+      "file": "session_9307936288",
+      "detected": true,
+      "ttd_windows": 17,
+      "n_windows": 57
+    },
+    {
+      "file": "session_9579651012",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 64
+    },
+    {
+      "file": "session_9759261305",
+      "detected": true,
+      "ttd_windows": 6,
+      "n_windows": 54
+    },
+    {
+      "file": "session_9787004965",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 58
+    },
+    {
+      "file": "session_0228122983",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 57
+    },
+    {
+      "file": "session_0305606782",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 11
+    },
+    {
+      "file": "session_0508486473",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 13
+    },
+    {
+      "file": "session_0843115603",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 36
+    },
+    {
+      "file": "session_2046923002",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 27
+    },
+    {
+      "file": "session_2064160756",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 207
+    },
+    {
+      "file": "session_3147629890",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 21
+    },
+    {
+      "file": "session_3172392634",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 10
+    },
+    {
+      "file": "session_3660445831",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 11
+    },
+    {
+      "file": "session_5487557068",
+      "detected": true,
+      "ttd_windows": 19,
+      "n_windows": 67
+    },
+    {
+      "file": "session_5746562839",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 37
+    },
+    {
+      "file": "session_6007924250",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 19
+    },
+    {
+      "file": "session_6056134961",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 28
+    },
+    {
+      "file": "session_6982446047",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 109
+    },
+    {
+      "file": "session_7011327614",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 95
+    },
+    {
+      "file": "session_7648037009",
+      "detected": true,
+      "ttd_windows": 17,
+      "n_windows": 29
+    },
+    {
+      "file": "session_8407883787",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 40
+    },
+    {
+      "file": "session_9518245436",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 44
+    },
+    {
+      "file": "session_9551087650",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 37
+    },
+    {
+      "file": "session_9951071945",
+      "detected": true,
+      "ttd_windows": 41,
+      "n_windows": 42
+    },
+    {
+      "file": "session_0111356050",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 61
+    },
+    {
+      "file": "session_0376544801",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 22
+    },
+    {
+      "file": "session_0402994139",
+      "detected": true,
+      "ttd_windows": 56,
+      "n_windows": 64
+    },
+    {
+      "file": "session_0462903577",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 3
+    },
+    {
+      "file": "session_0493270999",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 16
+    },
+    {
+      "file": "session_0841557171",
+      "detected": true,
+      "ttd_windows": 16,
+      "n_windows": 26
+    },
+    {
+      "file": "session_0989732540",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 11
+    },
+    {
+      "file": "session_1553613542",
+      "detected": true,
+      "ttd_windows": 12,
+      "n_windows": 71
+    },
+    {
+      "file": "session_1893250984",
+      "detected": true,
+      "ttd_windows": 6,
+      "n_windows": 32
+    },
+    {
+      "file": "session_2272584671",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 45
+    },
+    {
+      "file": "session_2381827805",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 39
+    },
+    {
+      "file": "session_2389761713",
+      "detected": true,
+      "ttd_windows": 22,
+      "n_windows": 46
+    },
+    {
+      "file": "session_2412921544",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 19
+    },
+    {
+      "file": "session_2426108754",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 41
+    },
+    {
+      "file": "session_2585594441",
+      "detected": true,
+      "ttd_windows": 5,
+      "n_windows": 58
+    },
+    {
+      "file": "session_2689331954",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 64
+    },
+    {
+      "file": "session_2751066909",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 15
+    },
+    {
+      "file": "session_2809105327",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 54
+    },
+    {
+      "file": "session_2878525110",
+      "detected": true,
+      "ttd_windows": 18,
+      "n_windows": 72
+    },
+    {
+      "file": "session_3028558496",
+      "detected": true,
+      "ttd_windows": 24,
+      "n_windows": 38
+    },
+    {
+      "file": "session_3097489009",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 20
+    },
+    {
+      "file": "session_3116416990",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 105
+    },
+    {
+      "file": "session_3182721337",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 9
+    },
+    {
+      "file": "session_3203109772",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 35
+    },
+    {
+      "file": "session_3389870646",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 3
+    },
+    {
+      "file": "session_3669155019",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 16
+    },
+    {
+      "file": "session_3696132790",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 149
+    },
+    {
+      "file": "session_3762712464",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 64
+    },
+    {
+      "file": "session_4251225905",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 64
+    },
+    {
+      "file": "session_4289581476",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 48
+    },
+    {
+      "file": "session_4331334148",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 44
+    },
+    {
+      "file": "session_4481103124",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 16
+    },
+    {
+      "file": "session_4559429580",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 36
+    },
+    {
+      "file": "session_4767254104",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 70
+    },
+    {
+      "file": "session_5013714842",
+      "detected": true,
+      "ttd_windows": 8,
+      "n_windows": 56
+    },
+    {
+      "file": "session_5445301341",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 67
+    },
+    {
+      "file": "session_5517823185",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 21
+    },
+    {
+      "file": "session_5527782146",
+      "detected": true,
+      "ttd_windows": 49,
+      "n_windows": 55
+    },
+    {
+      "file": "session_5690417333",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 59
+    },
+    {
+      "file": "session_5811752669",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 55
+    },
+    {
+      "file": "session_5931589642",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 40
+    },
+    {
+      "file": "session_6051914984",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 23
+    },
+    {
+      "file": "session_6295392963",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 31
+    },
+    {
+      "file": "session_6425950736",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 78
+    },
+    {
+      "file": "session_6452949084",
+      "detected": true,
+      "ttd_windows": 10,
+      "n_windows": 54
+    },
+    {
+      "file": "session_6479266110",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 52
+    },
+    {
+      "file": "session_6480157843",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 51
+    },
+    {
+      "file": "session_6497918859",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 18
+    },
+    {
+      "file": "session_6637610294",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_6816047521",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 60
+    },
+    {
+      "file": "session_6933816157",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 56
+    },
+    {
+      "file": "session_6970752744",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 8
+    },
+    {
+      "file": "session_7093950723",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 33
+    },
+    {
+      "file": "session_7100038229",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 40
+    },
+    {
+      "file": "session_7177007633",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_7217479988",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 32
+    },
+    {
+      "file": "session_7273363943",
+      "detected": true,
+      "ttd_windows": 6,
+      "n_windows": 18
+    },
+    {
+      "file": "session_7326699927",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 10
+    },
+    {
+      "file": "session_7354123043",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 53
+    },
+    {
+      "file": "session_7370016891",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 21
+    },
+    {
+      "file": "session_7437771065",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 62
+    },
+    {
+      "file": "session_7534749559",
+      "detected": true,
+      "ttd_windows": 4,
+      "n_windows": 33
+    },
+    {
+      "file": "session_7788563873",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 30
+    },
+    {
+      "file": "session_8185572921",
+      "detected": true,
+      "ttd_windows": 4,
+      "n_windows": 32
+    },
+    {
+      "file": "session_8281638783",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 80
+    },
+    {
+      "file": "session_8340206664",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 56
+    },
+    {
+      "file": "session_8478632285",
+      "detected": true,
+      "ttd_windows": 4,
+      "n_windows": 26
+    },
+    {
+      "file": "session_8639984402",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 17
+    },
+    {
+      "file": "session_8728901791",
+      "detected": true,
+      "ttd_windows": 2,
+      "n_windows": 42
+    },
+    {
+      "file": "session_9127961354",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_9525615730",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 10
+    },
+    {
+      "file": "session_9667273084",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 14
+    },
+    {
+      "file": "session_9674716665",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 28
+    },
+    {
+      "file": "session_0147719489",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 19
+    },
+    {
+      "file": "session_0984393142",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 15
+    },
+    {
+      "file": "session_1063325046",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 53
+    },
+    {
+      "file": "session_1081274523",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 11
+    },
+    {
+      "file": "session_1503605581",
+      "detected": true,
+      "ttd_windows": 29,
+      "n_windows": 46
+    },
+    {
+      "file": "session_1708671050",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 43
+    },
+    {
+      "file": "session_2590894741",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 17
+    },
+    {
+      "file": "session_2671379191",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 29
+    },
+    {
+      "file": "session_2715537964",
+      "detected": true,
+      "ttd_windows": 24,
+      "n_windows": 77
+    },
+    {
+      "file": "session_3269754223",
+      "detected": true,
+      "ttd_windows": 16,
+      "n_windows": 20
+    },
+    {
+      "file": "session_3319050185",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 7
+    },
+    {
+      "file": "session_3748528962",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 15
+    },
+    {
+      "file": "session_3876004338",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 65
+    },
+    {
+      "file": "session_4163238472",
+      "detected": true,
+      "ttd_windows": 31,
+      "n_windows": 87
+    },
+    {
+      "file": "session_4339907415",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 15
+    },
+    {
+      "file": "session_4844871120",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 53
+    },
+    {
+      "file": "session_5037856261",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 59
+    },
+    {
+      "file": "session_5483480261",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 64
+    },
+    {
+      "file": "session_5497122814",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 19
+    },
+    {
+      "file": "session_5884843843",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 16
+    },
+    {
+      "file": "session_6106477620",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 34
+    },
+    {
+      "file": "session_6129550717",
+      "detected": true,
+      "ttd_windows": 4,
+      "n_windows": 57
+    },
+    {
+      "file": "session_6490827344",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 36
+    },
+    {
+      "file": "session_6556036411",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 20
+    },
+    {
+      "file": "session_6617825429",
+      "detected": true,
+      "ttd_windows": 16,
+      "n_windows": 29
+    },
+    {
+      "file": "session_6638271928",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 45
+    },
+    {
+      "file": "session_6738388054",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 32
+    },
+    {
+      "file": "session_7157064073",
+      "detected": true,
+      "ttd_windows": 6,
+      "n_windows": 30
+    },
+    {
+      "file": "session_7358104277",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 28
+    },
+    {
+      "file": "session_7370840078",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 30
+    },
+    {
+      "file": "session_7873949379",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 53
+    },
+    {
+      "file": "session_7933738052",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 27
+    },
+    {
+      "file": "session_8810377918",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 14
+    },
+    {
+      "file": "session_8883281313",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 57
+    },
+    {
+      "file": "session_8999428064",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 6
+    },
+    {
+      "file": "session_9067768063",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 16
+    },
+    {
+      "file": "session_9877506321",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 64
+    },
+    {
+      "file": "session_0233596484",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 5
+    },
+    {
+      "file": "session_0249395771",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 35
+    },
+    {
+      "file": "session_0867569021",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 32
+    },
+    {
+      "file": "session_1067162598",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 41
+    },
+    {
+      "file": "session_1388817097",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 24
+    },
+    {
+      "file": "session_1428731346",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 91
+    },
+    {
+      "file": "session_2092170870",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 13
+    },
+    {
+      "file": "session_2386499713",
+      "detected": true,
+      "ttd_windows": 25,
+      "n_windows": 58
+    },
+    {
+      "file": "session_2541149709",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 49
+    },
+    {
+      "file": "session_2760097341",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 17
+    },
+    {
+      "file": "session_3277767566",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 44
+    },
+    {
+      "file": "session_3452570104",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 31
+    },
+    {
+      "file": "session_3524810503",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 14
+    },
+    {
+      "file": "session_3561215335",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 15
+    },
+    {
+      "file": "session_3735537656",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 53
+    },
+    {
+      "file": "session_3828692242",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 31
+    },
+    {
+      "file": "session_3919629858",
+      "detected": true,
+      "ttd_windows": 28,
+      "n_windows": 52
+    },
+    {
+      "file": "session_4066780045",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 4
+    },
+    {
+      "file": "session_4088341904",
+      "detected": true,
+      "ttd_windows": 8,
+      "n_windows": 9
+    },
+    {
+      "file": "session_4269912456",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 23
+    },
+    {
+      "file": "session_4322210317",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 71
+    },
+    {
+      "file": "session_4619254586",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 36
+    },
+    {
+      "file": "session_4949372670",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 19
+    },
+    {
+      "file": "session_4962669721",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 79
+    },
+    {
+      "file": "session_5499827097",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 53
+    },
+    {
+      "file": "session_6228883788",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 41
+    },
+    {
+      "file": "session_6399026328",
+      "detected": true,
+      "ttd_windows": 8,
+      "n_windows": 47
+    },
+    {
+      "file": "session_6951064037",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 8
+    },
+    {
+      "file": "session_7395469781",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 15
+    },
+    {
+      "file": "session_7555995161",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 62
+    },
+    {
+      "file": "session_7861130331",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 60
+    },
+    {
+      "file": "session_7896781089",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 16
+    },
+    {
+      "file": "session_7935100368",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 9
+    },
+    {
+      "file": "session_8399176672",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 21
+    },
+    {
+      "file": "session_8602611959",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 13
+    },
+    {
+      "file": "session_8719700167",
+      "detected": true,
+      "ttd_windows": 12,
+      "n_windows": 15
+    },
+    {
+      "file": "session_8742024614",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 41
+    },
+    {
+      "file": "session_9057489846",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 28
+    },
+    {
+      "file": "session_9316476581",
+      "detected": true,
+      "ttd_windows": 3,
+      "n_windows": 21
+    },
+    {
+      "file": "session_9418948998",
+      "detected": true,
+      "ttd_windows": 3,
+      "n_windows": 31
+    },
+    {
+      "file": "session_9495657954",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 65
+    },
+    {
+      "file": "session_9821034386",
+      "detected": false,
+      "ttd_windows": null,
+      "n_windows": 21
+    },
+    {
+      "file": "session_9916663391",
+      "detected": true,
+      "ttd_windows": 1,
+      "n_windows": 33
+    }
+  ]
+}

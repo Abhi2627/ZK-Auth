@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-07-03",
+  "api": "http://localhost:3011",
+  "concurrency": 25,
+  "rounds": 10,
+  "roundsWithExactlyOneAccept": 10,
+  "totalAcceptedAcrossRounds": 10,
+  "expectedAccepted": 10,
+  "rejectionCodes": [
+    "NULLIFIER_REPLAY"
+  ],
+  "perRound": [
+    {
+      "round": 1,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 2,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 3,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 4,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 5,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 6,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 7,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 8,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 9,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    },
+    {
+      "round": 10,
+      "accepted": 1,
+      "rejected": 24,
+      "codes": [
+        "NULLIFIER_REPLAY"
+      ]
+    }
+  ]
+}

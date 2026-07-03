@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-07-03",
+  "institutions": 100,
+  "verifications": 20000,
+  "allValid": true,
+  "warmCache": {
+    "throughputPerSec": 27424,
+    "medianMs": 0.0362,
+    "p95Ms": 0.0387
+  },
+  "coldResolvePerVerify": {
+    "throughputPerSec": 19949,
+    "medianMs": 0.0408,
+    "p95Ms": 0.0429
+  }
+}

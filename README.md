@@ -896,6 +896,72 @@ defaultConfig {
 
 ---
 
+## Research Paper
+
+The full write-up — architecture, formal security analysis (enumerated
+adversaries A1–A5, security goals G1–G5, game-based proofs with derived
+probability bounds, and an adversary → goal → evidence traceability mapping),
+and all empirical results — is in
+[`papers/journal/zkauth-journal.tex`](./papers/journal/zkauth-journal.tex)
+(IEEEtran, self-contained bibliography).
+
+Headline measured results (Apple M4 unless noted):
+
+- **Auth login:** 132.5 ms median end-to-end (23% faster than an Argon2id
+  baseline), 723-byte Groth16 proof, 932-constraint auth circuit.
+- **Cross-device proof generation:** 62 ms (Node.js) → 254 ms (Galaxy S23) →
+  361 ms (Tab S9 FE+).
+- **Selective disclosure:** depth-8 Poseidon Merkle + range-checked GTE
+  circuit (4,790 constraints); 173.95 ms prove / 6.29 ms verify.
+- **Behavioral (Balabit):** AUC-ROC 0.816, per-window FAR 6.15%; empirically
+  detects **45.2%** of hijacked sessions (median 1 window) as a *secondary*
+  defense-in-depth layer.
+- **Single-node ceiling:** ~196 verify req/s measured (saturates at
+  concurrency 50); national-scale is a K-linear projection from this measured
+  number.
+
+## Recent Security Hardening
+
+- **OAuth context re-validation** — the round-tripped OAuth context is
+  re-validated server-side against the registered client before an
+  authorization code is minted (closes a forged-`redirect_uri` hole).
+- **Disclosure-circuit soundness** — `merkle_disclosure.circom` now
+  range-checks the compared value and threshold (`Num2Bits`), closing the
+  GTE comparator wrap-around gap.
+- **Nullifier ordering** — the durable nullifier is committed before the
+  challenge is consumed, so a crash between the two cannot drop the replay
+  guard.
+- **OAuth 2.0 Authorization Code flow** — `OAuthClient` and
+  `OAuthAuthorizationCode` Prisma models added (PKCE supported).
+
+## Reproducible Security & Scalability Benchmarks
+
+Each script prints a paste-ready result line and writes JSON to
+`benchmark/results/` (or `ml-service/eval/results/`). Backend-dependent
+scripts need the stack running (see Quick Start).
+
+```bash
+# G3 — replay rejection (100% rejected at the nullifier gate)
+node benchmark/run_replay_attack_test.mjs --api http://localhost:3001 --replays 20
+
+# G3 — atomicity under concurrency (exactly one accept per round)
+node benchmark/run_nullifier_contention_test.mjs --api http://localhost:3001 --concurrency 25 --rounds 10
+
+# Single-node saturation curve (throughput vs. latency)
+node benchmark/run_load_test.mjs --api http://localhost:3001 --levels 1,5,10,25,50,100 --requests 150
+
+# Multi-tenant Ed25519 verification throughput (O(1) per credential)
+node benchmark/run_ed25519_multitenant_bench.mjs --institutions 100 --verifications 20000
+
+# G5 — hijack time-to-detect on the Balabit test split (offline)
+cd ml-service && python eval/run_stepup_detection_eval.py \
+    --data-dir training/data/balabit-data \
+    --model-path models/lstm_balabit/model.keras \
+    --scaler-path models/lstm_balabit/scaler.pkl --threshold 0.90 --k 10
+```
+
+---
+
 ## Contributing
 
 1. Fork the repository and create a feature branch: `git checkout -b feat/your-feature`

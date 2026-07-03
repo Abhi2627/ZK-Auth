@@ -1,0 +1,84 @@
+{
+  "generatedAt": "2026-07-03",
+  "api": "http://localhost:3011",
+  "requestsPerLevel": 150,
+  "rows": [
+    {
+      "concurrency": 1,
+      "ok": 150,
+      "err": 0,
+      "errors": {},
+      "throughputPerSec": 14.5,
+      "p50": 69.2,
+      "p95": 79.2,
+      "p99": 83.2,
+      "wallMs": 10379
+    },
+    {
+      "concurrency": 5,
+      "ok": 150,
+      "err": 0,
+      "errors": {},
+      "throughputPerSec": 83.8,
+      "p50": 58,
+      "p95": 69.8,
+      "p99": 76,
+      "wallMs": 1790
+    },
+    {
+      "concurrency": 10,
+      "ok": 150,
+      "err": 0,
+      "errors": {},
+      "throughputPerSec": 158.3,
+      "p50": 61.1,
+      "p95": 72.7,
+      "p99": 73.8,
+      "wallMs": 947
+    },
+    {
+      "concurrency": 25,
+      "ok": 150,
+      "err": 0,
+      "errors": {},
+      "throughputPerSec": 191.6,
+      "p50": 131,
+      "p95": 150.6,
+      "p99": 152.4,
+      "wallMs": 783
+    },
+    {
+      "concurrency": 50,
+      "ok": 150,
+      "err": 0,
+      "errors": {},
+      "throughputPerSec": 195.5,
+      "p50": 246.2,
+      "p95": 276.1,
+      "p99": 281.4,
+      "wallMs": 767
+    },
+    {
+      "concurrency": 100,
+      "ok": 150,
+      "err": 0,
+      "errors": {},
+      "throughputPerSec": 158,
+      "p50": 568.6,
+      "p95": 712.6,
+      "p99": 735.1,
+      "wallMs": 949
+    }
+  ],
+  "peak": {
+    "concurrency": 50,
+    "ok": 150,
+    "err": 0,
+    "errors": {},
+    "throughputPerSec": 195.5,
+    "p50": 246.2,
+    "p95": 276.1,
+    "p99": 281.4,
+    "wallMs": 767
+  }
+}
