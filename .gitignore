@@ -95,3 +95,9 @@ certs/
 *.crt
 *.key
 !certs/.gitkeep
+
+# ── Unpublished academic work — keep PRIVATE until paper is accepted/published
+#    and the thesis is signed by the guides. Do NOT expose on a public remote.
+papers/
+thesis/
+Mtech_Thesis.pdf
